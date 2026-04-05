@@ -1,0 +1,262 @@
+"use client";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
+import { Rss, Plus, Trash2, Loader2, Video, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+
+interface Subscription {
+  id: string;
+  channelId: string;
+  channelName: string;
+  channelThumb?: string;
+  channelUrl: string;
+  isActive: boolean;
+  format: string;
+  quality: string;
+  lastChecked: string;
+}
+
+export function SubscriptionsClient() {
+  const [open, setOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [form, setForm] = useState({ url: "", format: "mp4", quality: "best" });
+  const queryClient = useQueryClient();
+
+  const { data: subs = [], isLoading } = useQuery<Subscription[]>({
+    queryKey: ["subscriptions"],
+    queryFn: () => axios.get("/api/subscriptions").then(r => r.data),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (data: object) => axios.post("/api/subscriptions", data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["subscriptions"] }); setOpen(false); setForm({ url: "", format: "mp4", quality: "best" }); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => axios.delete(`/api/subscriptions/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subscriptions"] }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      axios.patch(`/api/subscriptions/${id}`, { isActive }).then(r => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subscriptions"] }),
+  });
+
+  const checkMutation = useMutation({
+    mutationFn: (id?: string) =>
+      axios.post("/api/subscriptions/check", id ? { id } : {}).then(r => r.data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["downloads"] });
+    },
+  });
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#598392] border-t-transparent" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 sm:space-y-5 max-w-3xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">구독 채널</h2>
+          <p className="text-sm text-muted-foreground">새 영상을 자동으로 다운로드합니다</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => checkMutation.mutate(undefined)}
+            disabled={checkMutation.isPending || subs.filter(s => s.isActive).length === 0}
+            title="활성 구독 전체 새 영상 확인"
+            className="flex-1 sm:flex-none"
+          >
+            {checkMutation.isPending
+              ? <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              : <RefreshCw className="h-4 w-4 mr-1" />
+            }
+            전체 체크
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="bg-[#598392] hover:bg-[#4a7280] text-white flex-1 sm:flex-none">
+              <Plus className="h-4 w-4 mr-1" /> 구독 추가
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>채널 구독 추가</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={e => { e.preventDefault(); addMutation.mutate(form); }} className="space-y-4 mt-2">
+              <div className="space-y-2">
+                <Label>채널 URL</Label>
+                <Input
+                  placeholder="https://youtube.com/@channel"
+                  value={form.url}
+                  onChange={e => setForm({ ...form, url: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>포맷</Label>
+                  <Select value={form.format} onValueChange={v => setForm({ ...form, format: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["mp4", "webm", "mp3", "m4a"].map(f => <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>화질</Label>
+                  <Select value={form.quality} onValueChange={v => setForm({ ...form, quality: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["best", "1080p", "720p", "480p"].map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>취소</Button>
+                <Button type="submit" className="flex-1 bg-[#598392] hover:bg-[#4a7280] text-white" disabled={addMutation.isPending}>
+                  {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  추가
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+        </div>
+      </div>
+
+      {subs.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Rss className="h-14 w-14 mx-auto mb-4 opacity-25" />
+          <p className="text-lg font-medium">구독 채널이 없습니다</p>
+          <p className="text-sm mt-1">채널을 추가하면 새 영상을 자동으로 다운로드합니다</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {subs.map(sub => (
+            <Card key={sub.id} className="hover:shadow-sm transition-shadow">
+              <div className="p-3 sm:p-4 space-y-2 sm:space-y-0">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+                    {sub.channelThumb
+                      ? <img src={sub.channelThumb} alt="" className="w-full h-full object-cover" />
+                      : <Video className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm sm:text-base truncate">{sub.channelName}</p>
+                    <div className="flex gap-2 mt-0.5 flex-wrap">
+                      <Badge variant="brand-sub" className="text-[10px] h-4">{sub.format.toUpperCase()}</Badge>
+                      <span className="text-xs text-muted-foreground">{sub.quality}</span>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
+                        마지막 확인: {new Date(sub.lastChecked).toLocaleDateString("ko-KR")}
+                      </span>
+                    </div>
+                  </div>
+                  {/* 데스크톱 액션 */}
+                  <div className="hidden sm:flex items-center gap-3 shrink-0">
+                    <Switch
+                      checked={sub.isActive}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ id: sub.id, isActive: checked })}
+                    />
+                    <span className="text-xs text-muted-foreground w-10">{sub.isActive ? "활성" : "중단"}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-[#598392]"
+                      onClick={() => checkMutation.mutate(sub.id)}
+                      disabled={checkMutation.isPending || !sub.isActive}
+                      title="새 영상 확인"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${checkMutation.isPending ? "animate-spin" : ""}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                      onClick={() => setDeleteTarget({ id: sub.id, name: sub.channelName })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                {/* 모바일 액션 */}
+                <div className="flex sm:hidden items-center gap-2 border-t border-border pt-2">
+                  <Switch
+                    checked={sub.isActive}
+                    onCheckedChange={(checked) => toggleMutation.mutate({ id: sub.id, isActive: checked })}
+                  />
+                  <span className="text-xs text-muted-foreground">{sub.isActive ? "활성" : "중단"}</span>
+                  <div className="flex-1" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-[#598392]"
+                    onClick={() => checkMutation.mutate(sub.id)}
+                    disabled={checkMutation.isPending || !sub.isActive}
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 mr-1 ${checkMutation.isPending ? "animate-spin" : ""}`} />
+                    체크
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-red-500"
+                    onClick={() => setDeleteTarget({ id: sub.id, name: sub.channelName })}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    삭제
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Trash2 className="h-4 w-4 text-red-500" />
+              구독 삭제
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            &ldquo;{deleteTarget?.name}&rdquo; 구독을 정말 삭제하시겠습니까?
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 sm:flex-none">취소</Button>
+            <Button
+              variant="destructive"
+              className="flex-1 sm:flex-none"
+              onClick={() => {
+                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+                setDeleteTarget(null);
+              }}
+            >
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

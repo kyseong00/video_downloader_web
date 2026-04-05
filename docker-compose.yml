@@ -1,0 +1,48 @@
+services:
+  video-downloader:
+    # Build from local Dockerfile
+    build: .
+    container_name: video_downloader
+
+    # Host port:Container port
+    ports:
+      - "3033:3000"
+
+    environment:
+      # Match container user to host user for volume permissions
+      # Check with: id -u / id -g
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+
+      # Database path (inside container)
+      - DATABASE_URL=file:/app/data/prod.db
+
+      # NextAuth secret - REQUIRED to change in production
+      # Generate: openssl rand -base64 32
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-this-secret-in-production}
+
+      # Public access URL (browser address)
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3033}
+      - AUTH_URL=${AUTH_URL:-http://localhost:3033}
+
+      # Download path (inside container)
+      - DOWNLOAD_PATH=/app/public/downloads
+
+      # Required when behind reverse proxy (Nginx, Cloudflare, etc.)
+      - AUTH_TRUST_HOST=true
+
+    volumes:
+      # Host path mounts (accessible via file manager)
+      - ./data/db:/app/data
+      - ./data/downloads:/app/public/downloads
+
+      # Alternative: Docker named volumes (simpler, managed by Docker)
+      # - video_downloader_db:/app/data
+      # - video_downloader_downloads:/app/public/downloads
+
+    restart: unless-stopped
+
+# Uncomment if using named volumes above
+# volumes:
+#   video_downloader_db:
+#   video_downloader_downloads:

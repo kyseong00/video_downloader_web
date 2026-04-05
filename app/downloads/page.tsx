@@ -1,0 +1,15 @@
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { DownloadsClient } from "@/components/download/DownloadsClient";
+
+export default async function DownloadsPage() {
+  const session = await auth();
+  if (!session) redirect("/login");
+
+  return (
+    <MainLayout userName={session.user?.name || ""} userRole={(session.user as { role?: string }).role}>
+      <DownloadsClient />
+    </MainLayout>
+  );
+}

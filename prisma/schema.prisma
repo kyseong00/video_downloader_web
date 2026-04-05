@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  downloads     Download[]
+  subscriptions Subscription[]
+  playlists     Playlist[]
+  settings      UserSettings?
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model Download {
+  id        String         @id @default(cuid())
+  url       String
+  title     String
+  thumbnail String?
+  filePath  String?
+  fileSize  BigInt?
+  duration  Int?
+  format    String         @default("mp4")
+  quality   String         @default("best")
+  status    DownloadStatus @default(PENDING)
+  progress  Float          @default(0)
+  type      MediaType      @default(VIDEO)
+  error     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playlistItems PlaylistItem[]
+}
+
+enum DownloadStatus {
+  PENDING
+  DOWNLOADING
+  PROCESSING
+  DONE
+  ERROR
+}
+
+enum MediaType {
+  VIDEO
+  AUDIO
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  channelId    String
+  channelName  String
+  channelThumb String?
+  channelUrl   String
+  isActive     Boolean  @default(true)
+  format       String   @default("mp4")
+  quality      String   @default("best")
+  lastChecked  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+}
+
+model Playlist {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  PlaylistItem[]
+}
+
+model PlaylistItem {
+  id         String   @id @default(cuid())
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  downloadId String
+  download   Download @relation(fields: [downloadId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, downloadId])
+}
+
+model UserSettings {
+  id               String @id @default(cuid())
+  downloadPath     String @default("./downloads")
+  maxConcurrent    Int    @default(3)
+  defaultFormat    String @default("mp4")
+  defaultQuality   String @default("best")
+  pollInterval     Int    @default(3600)
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
