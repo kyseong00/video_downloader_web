@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "react-i18next";
 
 interface Subscription {
   id: string;
@@ -25,6 +26,7 @@ interface Subscription {
 }
 
 export function SubscriptionsClient() {
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState({ url: "", format: "mp4", quality: "best" });
@@ -70,8 +72,8 @@ export function SubscriptionsClient() {
     <div className="space-y-4 sm:space-y-5 max-w-3xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">구독 채널</h2>
-          <p className="text-sm text-muted-foreground">새 영상을 자동으로 다운로드합니다</p>
+          <h2 className="text-lg font-semibold">{t("subscription.heading")}</h2>
+          <p className="text-sm text-muted-foreground">{t("subscription.headingDesc")}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -79,28 +81,28 @@ export function SubscriptionsClient() {
             size="sm"
             onClick={() => checkMutation.mutate(undefined)}
             disabled={checkMutation.isPending || subs.filter(s => s.isActive).length === 0}
-            title="활성 구독 전체 새 영상 확인"
+            title={t("subscription.checkAllTitle")}
             className="flex-1 sm:flex-none"
           >
             {checkMutation.isPending
               ? <Loader2 className="h-4 w-4 animate-spin mr-1" />
               : <RefreshCw className="h-4 w-4 mr-1" />
             }
-            전체 체크
+            {t("subscription.checkAll")}
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="bg-[#598392] hover:bg-[#4a7280] text-white flex-1 sm:flex-none">
-              <Plus className="h-4 w-4 mr-1" /> 구독 추가
+              <Plus className="h-4 w-4 mr-1" /> {t("subscription.addChannel")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>채널 구독 추가</DialogTitle>
+              <DialogTitle>{t("subscription.addDialogTitle")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={e => { e.preventDefault(); addMutation.mutate(form); }} className="space-y-4 mt-2">
               <div className="space-y-2">
-                <Label>채널 URL</Label>
+                <Label>{t("subscription.channelUrl")}</Label>
                 <Input
                   placeholder="https://youtube.com/@channel"
                   value={form.url}
@@ -110,7 +112,7 @@ export function SubscriptionsClient() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>포맷</Label>
+                  <Label>{t("subscription.format")}</Label>
                   <Select value={form.format} onValueChange={v => setForm({ ...form, format: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -119,7 +121,7 @@ export function SubscriptionsClient() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>화질</Label>
+                  <Label>{t("subscription.quality")}</Label>
                   <Select value={form.quality} onValueChange={v => setForm({ ...form, quality: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -129,10 +131,10 @@ export function SubscriptionsClient() {
                 </div>
               </div>
               <div className="flex gap-2 pt-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>취소</Button>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
                 <Button type="submit" className="flex-1 bg-[#598392] hover:bg-[#4a7280] text-white" disabled={addMutation.isPending}>
                   {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  추가
+                  {t("subscription.addButton")}
                 </Button>
               </div>
             </form>
@@ -144,8 +146,8 @@ export function SubscriptionsClient() {
       {subs.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Rss className="h-14 w-14 mx-auto mb-4 opacity-25" />
-          <p className="text-lg font-medium">구독 채널이 없습니다</p>
-          <p className="text-sm mt-1">채널을 추가하면 새 영상을 자동으로 다운로드합니다</p>
+          <p className="text-lg font-medium">{t("subscription.empty")}</p>
+          <p className="text-sm mt-1">{t("subscription.emptyHint")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -165,7 +167,7 @@ export function SubscriptionsClient() {
                       <Badge variant="brand-sub" className="text-[10px] h-4">{sub.format.toUpperCase()}</Badge>
                       <span className="text-xs text-muted-foreground">{sub.quality}</span>
                       <span className="text-xs text-muted-foreground hidden sm:inline">
-                        마지막 확인: {new Date(sub.lastChecked).toLocaleDateString("ko-KR")}
+                        {t("subscription.lastChecked")}: {new Date(sub.lastChecked).toLocaleDateString(i18n.language === "ko" ? "ko-KR" : "en-US")}
                       </span>
                     </div>
                   </div>
@@ -175,14 +177,14 @@ export function SubscriptionsClient() {
                       checked={sub.isActive}
                       onCheckedChange={(checked) => toggleMutation.mutate({ id: sub.id, isActive: checked })}
                     />
-                    <span className="text-xs text-muted-foreground w-10">{sub.isActive ? "활성" : "중단"}</span>
+                    <span className="text-xs text-muted-foreground w-10">{sub.isActive ? t("subscription.active") : t("subscription.inactive")}</span>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-[#598392]"
                       onClick={() => checkMutation.mutate(sub.id)}
                       disabled={checkMutation.isPending || !sub.isActive}
-                      title="새 영상 확인"
+                      title={t("subscription.checkNewVideos")}
                     >
                       <RefreshCw className={`h-3.5 w-3.5 ${checkMutation.isPending ? "animate-spin" : ""}`} />
                     </Button>
@@ -202,7 +204,7 @@ export function SubscriptionsClient() {
                     checked={sub.isActive}
                     onCheckedChange={(checked) => toggleMutation.mutate({ id: sub.id, isActive: checked })}
                   />
-                  <span className="text-xs text-muted-foreground">{sub.isActive ? "활성" : "중단"}</span>
+                  <span className="text-xs text-muted-foreground">{sub.isActive ? t("subscription.active") : t("subscription.inactive")}</span>
                   <div className="flex-1" />
                   <Button
                     variant="ghost"
@@ -212,7 +214,7 @@ export function SubscriptionsClient() {
                     disabled={checkMutation.isPending || !sub.isActive}
                   >
                     <RefreshCw className={`h-3.5 w-3.5 mr-1 ${checkMutation.isPending ? "animate-spin" : ""}`} />
-                    체크
+                    {t("subscription.check")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -221,7 +223,7 @@ export function SubscriptionsClient() {
                     onClick={() => setDeleteTarget({ id: sub.id, name: sub.channelName })}
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1" />
-                    삭제
+                    {t("common.delete")}
                   </Button>
                 </div>
               </div>
@@ -236,14 +238,14 @@ export function SubscriptionsClient() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <Trash2 className="h-4 w-4 text-red-500" />
-              구독 삭제
+              {t("subscription.deleteTitle")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            &ldquo;{deleteTarget?.name}&rdquo; 구독을 정말 삭제하시겠습니까?
+            {t("subscription.deleteMessage", { name: deleteTarget?.name ?? "" })}
           </p>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 sm:flex-none">취소</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 sm:flex-none">{t("common.cancel")}</Button>
             <Button
               variant="destructive"
               className="flex-1 sm:flex-none"
@@ -252,7 +254,7 @@ export function SubscriptionsClient() {
                 setDeleteTarget(null);
               }}
             >
-              삭제
+              {t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

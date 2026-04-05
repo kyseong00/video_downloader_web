@@ -15,8 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { formatFileSize, formatDuration, getStatusLabel, getThumbnailUrl } from "@/lib/utils";
+import { formatFileSize, formatDuration, getThumbnailUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface DownloadItem {
   id: string;
@@ -40,12 +41,13 @@ interface DownloadItem {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   const config = {
-    PENDING: { variant: "pending" as const, icon: Clock, label: "대기 중" },
-    DOWNLOADING: { variant: "info" as const, icon: Loader2, label: "다운로드 중" },
-    PROCESSING: { variant: "warning" as const, icon: RefreshCw, label: "처리 중" },
-    DONE: { variant: "success" as const, icon: CheckCircle2, label: "완료" },
-    ERROR: { variant: "destructive" as const, icon: AlertCircle, label: "오류" },
+    PENDING: { variant: "pending" as const, icon: Clock, label: t("home.statusPending") },
+    DOWNLOADING: { variant: "info" as const, icon: Loader2, label: t("home.statusDownloading") },
+    PROCESSING: { variant: "warning" as const, icon: RefreshCw, label: t("home.statusProcessing") },
+    DONE: { variant: "success" as const, icon: CheckCircle2, label: t("home.statusDone") },
+    ERROR: { variant: "destructive" as const, icon: AlertCircle, label: t("home.statusError") },
   }[status] || { variant: "outline" as const, icon: Clock, label: status };
   const Icon = config.icon;
   return (
@@ -148,26 +150,28 @@ function VideoPlayerDialog({ item, open, onClose }: { item: DownloadItem; open: 
 
 // 상세 모달
 function DetailsDialog({ item, open, onClose }: { item: DownloadItem; open: boolean; onClose: () => void }) {
+  const { t, i18n } = useTranslation();
   const filename = item.filePath?.split("/").pop();
   const resolution = item.width && item.height ? `${item.width} × ${item.height}` : item.quality !== "best" ? item.quality : null;
+  const dateLocale = i18n.language === "ko" ? "ko-KR" : "en-US";
   const rows = [
-    { icon: <FileVideo className="h-4 w-4" />, label: "파일명", value: filename || "-" },
-    { icon: <HardDrive className="h-4 w-4" />, label: "파일 크기", value: item.fileSize ? formatFileSize(item.fileSize) : "-" },
-    { icon: <Maximize2 className="h-4 w-4" />, label: "해상도", value: resolution || "-" },
-    { icon: <Clock className="h-4 w-4" />, label: "재생 시간", value: item.duration ? formatDuration(item.duration) : "-" },
-    { icon: <Hash className="h-4 w-4" />, label: "형식", value: `${item.format.toUpperCase()} · ${item.type}` },
-    { icon: <Calendar className="h-4 w-4" />, label: "다운로드 날짜", value: new Date(item.createdAt).toLocaleString("ko-KR") },
+    { icon: <FileVideo className="h-4 w-4" />, label: t("home.detailFilename"), value: filename || "-" },
+    { icon: <HardDrive className="h-4 w-4" />, label: t("home.detailFileSize"), value: item.fileSize ? formatFileSize(item.fileSize) : "-" },
+    { icon: <Maximize2 className="h-4 w-4" />, label: t("home.detailResolution"), value: resolution || "-" },
+    { icon: <Clock className="h-4 w-4" />, label: t("home.detailDuration"), value: item.duration ? formatDuration(item.duration) : "-" },
+    { icon: <Hash className="h-4 w-4" />, label: t("home.detailFormat"), value: `${item.format.toUpperCase()} · ${item.type}` },
+    { icon: <Calendar className="h-4 w-4" />, label: t("home.detailDate"), value: new Date(item.createdAt).toLocaleString(dateLocale) },
   ];
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle className="flex items-center gap-2 text-base"><Info className="h-4 w-4 text-[#598392]" />상세 정보</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="flex items-center gap-2 text-base"><Info className="h-4 w-4 text-[#598392]" />{t("home.detailsTitle")}</DialogTitle></DialogHeader>
         {item.thumbnail && <div className="rounded-lg overflow-hidden aspect-video bg-muted"><img src={getThumbnailUrl(item.thumbnail, item.id)} alt={item.title} className="w-full h-full object-cover" /></div>}
         <p className="font-medium text-sm leading-tight">{item.title}</p>
         <div className="space-y-2.5 mt-1">{rows.map(r => (
           <div key={r.label} className="flex items-start gap-3"><span className="text-muted-foreground mt-0.5 shrink-0">{r.icon}</span><div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">{r.label}</p><p className="text-sm font-medium break-all">{r.value}</p></div></div>
         ))}</div>
-        {item.filePath && <div className="rounded-md bg-muted px-3 py-2"><p className="text-xs text-muted-foreground mb-1">저장 경로</p><p className="text-xs font-mono break-all">{item.filePath}</p></div>}
+        {item.filePath && <div className="rounded-md bg-muted px-3 py-2"><p className="text-xs text-muted-foreground mb-1">{t("home.detailSavePath")}</p><p className="text-xs font-mono break-all">{item.filePath}</p></div>}
       </DialogContent>
     </Dialog>
   );
@@ -175,14 +179,15 @@ function DetailsDialog({ item, open, onClose }: { item: DownloadItem; open: bool
 
 // 삭제 확인
 function DeleteConfirmDialog({ open, onClose, onConfirm, title }: { open: boolean; onClose: () => void; onConfirm: () => void; title: string }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle className="flex items-center gap-2 text-base"><Trash2 className="h-4 w-4 text-red-500" />삭제 확인</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground">&ldquo;{title}&rdquo;을(를) 정말 삭제하시겠습니까?</p>
+        <DialogHeader><DialogTitle className="flex items-center gap-2 text-base"><Trash2 className="h-4 w-4 text-red-500" />{t("home.deleteTitle")}</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">{t("home.deleteMessage", { title })}</p>
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">취소</Button>
-          <Button variant="destructive" onClick={onConfirm} className="flex-1 sm:flex-none">삭제</Button>
+          <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">{t("common.cancel")}</Button>
+          <Button variant="destructive" onClick={onConfirm} className="flex-1 sm:flex-none">{t("common.delete")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -192,6 +197,7 @@ function DeleteConfirmDialog({ open, onClose, onConfirm, title }: { open: boolea
 const ITEMS_PER_PAGE = 12;
 
 export function DownloadsClient() {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -238,26 +244,26 @@ export function DownloadsClient() {
       <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
         <div className="relative flex-1 min-w-[160px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="검색..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-9 h-9" />
+          <Input placeholder={t("downloads.searchPlaceholder")} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-9 h-9" />
         </div>
 
         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="w-28 sm:w-36 h-9"><Filter className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체 상태</SelectItem>
-            <SelectItem value="DONE">완료</SelectItem>
-            <SelectItem value="DOWNLOADING">다운로드 중</SelectItem>
-            <SelectItem value="PENDING">대기 중</SelectItem>
-            <SelectItem value="ERROR">오류</SelectItem>
+            <SelectItem value="all">{t("downloads.statusAll")}</SelectItem>
+            <SelectItem value="DONE">{t("home.statusDone")}</SelectItem>
+            <SelectItem value="DOWNLOADING">{t("home.statusDownloading")}</SelectItem>
+            <SelectItem value="PENDING">{t("home.statusPending")}</SelectItem>
+            <SelectItem value="ERROR">{t("home.statusError")}</SelectItem>
           </SelectContent>
         </Select>
 
         <Select value={typeFilter} onValueChange={v => { setTypeFilter(v); setPage(1); }}>
           <SelectTrigger className="w-24 sm:w-28 h-9"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체</SelectItem>
-            <SelectItem value="VIDEO">영상</SelectItem>
-            <SelectItem value="AUDIO">오디오</SelectItem>
+            <SelectItem value="all">{t("files.typeAll")}</SelectItem>
+            <SelectItem value="VIDEO">{t("files.typeVideo")}</SelectItem>
+            <SelectItem value="AUDIO">{t("files.typeAudio")}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -267,13 +273,13 @@ export function DownloadsClient() {
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">{allFiltered.length}개 항목</p>
+      <p className="text-sm text-muted-foreground">{t("downloads.countSuffix", { n: allFiltered.length })}</p>
 
       {allFiltered.length === 0 ? (
         <div className="text-center py-12 sm:py-16 text-muted-foreground">
           <Download className="h-12 w-12 mx-auto mb-4 opacity-25" />
-          <p className="text-lg font-medium">다운로드 항목이 없습니다</p>
-          <p className="text-sm mt-1">홈에서 URL을 입력해 다운로드를 시작하세요</p>
+          <p className="text-lg font-medium">{t("home.empty")}</p>
+          <p className="text-sm mt-1">{t("downloads.emptyHint")}</p>
         </div>
       ) : viewMode === "list" ? (
         <div className="space-y-2">
@@ -316,21 +322,21 @@ export function DownloadsClient() {
                   {item.status === "DONE" && (
                     <>
                       <Button variant="ghost" size="sm" className="h-7 px-1.5 sm:px-2 text-xs text-muted-foreground hover:text-[#598392] gap-1" onClick={() => setPlayerItem(item)}>
-                        <Play className="h-3.5 w-3.5" /><span className="hidden sm:inline">재생</span>
+                        <Play className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("home.play")}</span>
                       </Button>
                       <a href={`/api/downloads/${item.id}/file?dl=1`} download={item.title}>
                         <Button variant="ghost" size="sm" className="h-7 px-1.5 sm:px-2 text-xs text-muted-foreground hover:text-[#598392] gap-1">
-                          <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">다운로드</span>
+                          <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("home.download")}</span>
                         </Button>
                       </a>
                       <Button variant="ghost" size="sm" className="h-7 px-1.5 sm:px-2 text-xs text-muted-foreground hover:text-[#598392] gap-1" onClick={() => setDetailsItem(item)}>
-                        <Info className="h-3.5 w-3.5" /><span className="hidden sm:inline">상세</span>
+                        <Info className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("home.details")}</span>
                       </Button>
                     </>
                   )}
                   <div className="flex-1" />
                   <Button variant="ghost" size="sm" className="h-7 px-1.5 sm:px-2 text-xs text-muted-foreground hover:text-red-600 gap-1" onClick={() => setDeleteTarget(item)}>
-                    <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">삭제</span>
+                    <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("common.delete")}</span>
                   </Button>
                 </div>
               </div>
@@ -360,12 +366,12 @@ export function DownloadsClient() {
                 <div className="flex items-center gap-1 mt-2 -mb-0.5">
                   {item.status === "DONE" && (
                     <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-[#598392] gap-0.5" onClick={() => setDetailsItem(item)}>
-                      <Info className="h-3 w-3" />상세
+                      <Info className="h-3 w-3" />{t("home.details")}
                     </Button>
                   )}
                   <div className="flex-1" />
                   <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-red-600 gap-0.5" onClick={() => setDeleteTarget(item)}>
-                    <Trash2 className="h-3 w-3" />삭제
+                    <Trash2 className="h-3 w-3" />{t("common.delete")}
                   </Button>
                 </div>
               </CardContent>
@@ -398,7 +404,7 @@ export function DownloadsClient() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => { if (deleteTarget) deleteMutation.mutate(deleteTarget.id); setDeleteTarget(null); }}
-        title={deleteTarget?.title || "이 항목"}
+        title={deleteTarget?.title || t("home.thisItem")}
       />
     </div>
   );

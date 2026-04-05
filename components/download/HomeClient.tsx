@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatFileSize, formatDuration, getThumbnailUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface DownloadItem {
   id: string;
@@ -51,34 +52,30 @@ interface PreviewInfo {
   playlistCount?: number;
 }
 
-const QUALITY_OPTIONS = [
-  { value: "best", label: "최고 화질" },
-  { value: "2160p", label: "4K (2160p)" },
-  { value: "1440p", label: "1440p" },
-  { value: "1080p", label: "1080p" },
-  { value: "720p", label: "720p" },
-  { value: "480p", label: "480p" },
-  { value: "360p", label: "360p" },
-];
+const QUALITY_VALUES = ["best", "2160p", "1440p", "1080p", "720p", "480p", "360p"];
 
 const VIDEO_FORMATS = ["mp4", "webm", "mkv"];
 const AUDIO_FORMATS = ["mp3", "m4a", "wav", "opus"];
 
-function formatViewCount(count?: number): string {
-  if (!count) return "";
-  if (count >= 100_000_000) return `${(count / 100_000_000).toFixed(1)}억회`;
-  if (count >= 10_000) return `${Math.floor(count / 10_000)}만회`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K회`;
-  return `${count}회`;
+function useFormatViewCount() {
+  const { t } = useTranslation();
+  return (count?: number): string => {
+    if (!count) return "";
+    if (count >= 100_000_000) return t("home.viewCountEok", { value: (count / 100_000_000).toFixed(1) });
+    if (count >= 10_000) return t("home.viewCountMan", { value: Math.floor(count / 10_000) });
+    if (count >= 1_000) return t("home.viewCountK", { value: (count / 1_000).toFixed(1) });
+    return t("home.viewCount", { value: count });
+  };
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   const config = {
-    PENDING: { variant: "pending" as const, icon: Clock, label: "대기 중" },
-    DOWNLOADING: { variant: "info" as const, icon: Loader2, label: "다운로드 중" },
-    PROCESSING: { variant: "warning" as const, icon: RefreshCw, label: "처리 중" },
-    DONE: { variant: "success" as const, icon: CheckCircle2, label: "완료" },
-    ERROR: { variant: "destructive" as const, icon: AlertCircle, label: "오류" },
+    PENDING: { variant: "pending" as const, icon: Clock, label: t("home.statusPending") },
+    DOWNLOADING: { variant: "info" as const, icon: Loader2, label: t("home.statusDownloading") },
+    PROCESSING: { variant: "warning" as const, icon: RefreshCw, label: t("home.statusProcessing") },
+    DONE: { variant: "success" as const, icon: CheckCircle2, label: t("home.statusDone") },
+    ERROR: { variant: "destructive" as const, icon: AlertCircle, label: t("home.statusError") },
   }[status] || { variant: "outline" as const, icon: Clock, label: status };
 
   const Icon = config.icon;
@@ -97,22 +94,23 @@ function DeleteConfirmDialog({ open, onClose, onConfirm, title }: {
   onConfirm: () => void;
   title: string;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Trash2 className="h-4 w-4 text-red-500" />
-            삭제 확인
+            {t("home.deleteTitle")}
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          &ldquo;{title}&rdquo;을(를) 정말 삭제하시겠습니까?
+          {t("home.deleteMessage", { title })}
         </p>
-        <p className="text-xs text-muted-foreground">파일과 다운로드 기록이 모두 삭제됩니다.</p>
+        <p className="text-xs text-muted-foreground">{t("home.deleteWarning")}</p>
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">취소</Button>
-          <Button variant="destructive" onClick={onConfirm} className="flex-1 sm:flex-none">삭제</Button>
+          <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">{t("common.cancel")}</Button>
+          <Button variant="destructive" onClick={onConfirm} className="flex-1 sm:flex-none">{t("common.delete")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -176,16 +174,18 @@ function VideoPlayerDialog({ item, open, onClose }: { item: DownloadItem; open: 
 
 // 상세 정보 모달
 function DetailsDialog({ item, open, onClose }: { item: DownloadItem; open: boolean; onClose: () => void }) {
+  const { t, i18n } = useTranslation();
   const filename = item.filePath ? item.filePath.split("/").pop() : null;
   const resolution = item.width && item.height ? `${item.width} × ${item.height}` : item.quality !== "best" ? item.quality : null;
+  const dateLocale = i18n.language === "ko" ? "ko-KR" : "en-US";
 
   const rows: { icon: React.ReactNode; label: string; value: string }[] = [
-    { icon: <FileVideo className="h-4 w-4" />, label: "파일명", value: filename || "-" },
-    { icon: <HardDrive className="h-4 w-4" />, label: "파일 크기", value: item.fileSize ? formatFileSize(item.fileSize) : "-" },
-    { icon: <Maximize2 className="h-4 w-4" />, label: "해상도", value: resolution || "-" },
-    { icon: <Clock className="h-4 w-4" />, label: "재생 시간", value: item.duration ? formatDuration(item.duration) : "-" },
-    { icon: <Hash className="h-4 w-4" />, label: "형식", value: `${item.format.toUpperCase()} · ${item.type}` },
-    { icon: <Calendar className="h-4 w-4" />, label: "다운로드 날짜", value: new Date(item.createdAt).toLocaleString("ko-KR") },
+    { icon: <FileVideo className="h-4 w-4" />, label: t("home.detailFilename"), value: filename || "-" },
+    { icon: <HardDrive className="h-4 w-4" />, label: t("home.detailFileSize"), value: item.fileSize ? formatFileSize(item.fileSize) : "-" },
+    { icon: <Maximize2 className="h-4 w-4" />, label: t("home.detailResolution"), value: resolution || "-" },
+    { icon: <Clock className="h-4 w-4" />, label: t("home.detailDuration"), value: item.duration ? formatDuration(item.duration) : "-" },
+    { icon: <Hash className="h-4 w-4" />, label: t("home.detailFormat"), value: `${item.format.toUpperCase()} · ${item.type}` },
+    { icon: <Calendar className="h-4 w-4" />, label: t("home.detailDate"), value: new Date(item.createdAt).toLocaleString(dateLocale) },
   ];
 
   return (
@@ -194,7 +194,7 @@ function DetailsDialog({ item, open, onClose }: { item: DownloadItem; open: bool
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Info className="h-4 w-4 text-[#598392]" />
-            상세 정보
+            {t("home.detailsTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -223,7 +223,7 @@ function DetailsDialog({ item, open, onClose }: { item: DownloadItem; open: bool
 
         {item.filePath && (
           <div className="rounded-md bg-muted px-3 py-2">
-            <p className="text-xs text-muted-foreground mb-1">저장 경로</p>
+            <p className="text-xs text-muted-foreground mb-1">{t("home.detailSavePath")}</p>
             <p className="text-xs font-mono break-all">{item.filePath}</p>
           </div>
         )}
@@ -312,6 +312,7 @@ function ThumbnailPreview({ item, onClick, size = "normal" }: { item: DownloadIt
 }
 
 function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDelete: (id: string) => void; onCancel: (id: string) => void }) {
+  const { t } = useTranslation();
   const [playerOpen, setPlayerOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -343,7 +344,7 @@ function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDele
                     className={cn("font-medium text-sm truncate", isDone && "cursor-pointer hover:text-[#598392]")}
                     onClick={isDone ? () => setPlayerOpen(true) : undefined}
                   >
-                    {item.title || "가져오는 중..."}
+                    {item.title || t("home.fetchingTitle")}
                   </p>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{item.url}</p>
                 </div>
@@ -392,7 +393,7 @@ function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDele
                   onClick={() => setPlayerOpen(true)}
                 >
                   <Play className="h-3.5 w-3.5" />
-                  <span className="hidden xs:inline">재생</span>
+                  <span className="hidden xs:inline">{t("home.play")}</span>
                 </Button>
                 <a href={`/api/downloads/${item.id}/file?dl=1`} download={item.title}>
                   <Button
@@ -401,7 +402,7 @@ function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDele
                     className="h-7 px-1.5 sm:px-2 text-xs text-muted-foreground hover:text-[#598392] gap-1 shrink-0"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    <span className="hidden xs:inline">다운로드</span>
+                    <span className="hidden xs:inline">{t("home.download")}</span>
                   </Button>
                 </a>
                 <Button
@@ -411,7 +412,7 @@ function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDele
                   onClick={() => setDetailsOpen(true)}
                 >
                   <Info className="h-3.5 w-3.5" />
-                  <span className="hidden xs:inline">상세</span>
+                  <span className="hidden xs:inline">{t("home.details")}</span>
                 </Button>
               </>
             )}
@@ -423,7 +424,7 @@ function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDele
                 onClick={() => onCancel(item.id)}
               >
                 <X className="h-3.5 w-3.5" />
-                취소
+                {t("home.cancel")}
               </Button>
             )}
             <div className="flex-1" />
@@ -434,7 +435,7 @@ function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDele
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span className="hidden xs:inline">삭제</span>
+              <span className="hidden xs:inline">{t("home.delete")}</span>
             </Button>
           </div>
         </div>
@@ -446,7 +447,7 @@ function DownloadCard({ item, onDelete, onCancel }: { item: DownloadItem; onDele
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         onConfirm={() => { setDeleteOpen(false); onDelete(item.id); }}
-        title={item.title || "이 항목"}
+        title={item.title || t("home.thisItem")}
       />
     </>
   );
@@ -470,6 +471,8 @@ function PreviewCard({
   mediaType: "VIDEO" | "AUDIO";
   isPending: boolean;
 }) {
+  const { t } = useTranslation();
+  const formatViewCount = useFormatViewCount();
   const viewCountText = formatViewCount(info.viewCount || info.view_count);
 
   return (
@@ -490,7 +493,7 @@ function PreviewCard({
               {info.isPlaylist ? (
                 <Badge variant="outline" className="text-[10px] h-4 gap-1">
                   <List className="h-2.5 w-2.5" />
-                  플레이리스트 {info.playlistCount ? `· ${info.playlistCount}개` : ""}
+                  {t("home.playlistLabel")} {info.playlistCount ? t("home.playlistCountSuffix", { n: info.playlistCount }) : ""}
                 </Badge>
               ) : (
                 <>
@@ -515,7 +518,7 @@ function PreviewCard({
               disabled={isPending}
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}
-              전체 다운로드
+              {t("home.downloadAll")}
             </Button>
             <Button
               size="sm"
@@ -525,7 +528,7 @@ function PreviewCard({
               disabled={isPending}
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Video className="h-3.5 w-3.5 mr-1.5" />}
-              첫 번째만
+              {t("home.firstOnly")}
             </Button>
           </div>
         ) : (
@@ -536,7 +539,7 @@ function PreviewCard({
             disabled={isPending}
           >
             {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}
-            다운로드 ({format.toUpperCase()} · {mediaType === "VIDEO" ? quality : "오디오"})
+            {t("home.downloadFormatted", { format: format.toUpperCase(), type: mediaType === "VIDEO" ? quality : t("home.mediaAudio") })}
           </Button>
         )}
       </CardContent>
@@ -555,6 +558,7 @@ function isValidUrl(str: string): boolean {
 }
 
 export function HomeClient() {
+  const { t } = useTranslation();
   const [url, setUrl] = useState("");
   const [mediaType, setMediaType] = useState<"VIDEO" | "AUDIO">("VIDEO");
   const [format, setFormat] = useState("mp4");
@@ -634,7 +638,7 @@ export function HomeClient() {
       const res = await axios.post("/api/downloads/info", { url: targetUrl.trim() });
       setPreviewInfo(res.data);
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "정보를 가져올 수 없습니다.";
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || t("home.fetchError");
       setPreviewError(message);
     } finally {
       setPreviewLoading(false);
@@ -699,9 +703,9 @@ export function HomeClient() {
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       {/* Hero */}
       <div className="text-center py-3 sm:py-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">동영상 다운로드</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">{t("home.headingTitle")}</h2>
         <p className="text-sm sm:text-base text-muted-foreground">
-          YouTube, Twitter, Instagram 등 다양한 플랫폼의 영상을 다운로드하세요
+          {t("home.headingDesc")}
         </p>
       </div>
 
@@ -713,7 +717,7 @@ export function HomeClient() {
               <div className="relative flex-1">
                 <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="URL을 입력하세요..."
+                  placeholder={t("home.urlPlaceholder")}
                   value={url}
                   onChange={e => handleUrlChange(e.target.value)}
                   className="pl-10 h-11 sm:h-12 text-sm sm:text-base"
@@ -728,7 +732,7 @@ export function HomeClient() {
                   ? <Loader2 className="h-4 w-4 animate-spin" />
                   : <Download className="h-4 w-4" />
                 }
-                <span className="ml-1.5 hidden sm:inline">다운로드</span>
+                <span className="ml-1.5 hidden sm:inline">{t("home.downloadButton")}</span>
               </Button>
             </div>
 
@@ -744,7 +748,7 @@ export function HomeClient() {
                   )}
                 >
                   <Video className="h-3.5 w-3.5" />
-                  영상
+                  {t("home.mediaVideo")}
                 </button>
                 <button
                   type="button"
@@ -755,7 +759,7 @@ export function HomeClient() {
                   )}
                 >
                   <Music className="h-3.5 w-3.5" />
-                  오디오
+                  {t("home.mediaAudio")}
                 </button>
               </div>
 
@@ -778,8 +782,8 @@ export function HomeClient() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {QUALITY_OPTIONS.map(q => (
-                      <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+                    {QUALITY_VALUES.map(q => (
+                      <SelectItem key={q} value={q}>{q === "best" ? t("home.qualityBest") : q === "2160p" ? "4K (2160p)" : q}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -793,7 +797,7 @@ export function HomeClient() {
       {previewLoading && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-3">
           <Loader2 className="h-4 w-4 animate-spin" />
-          영상 정보를 가져오는 중...
+          {t("home.fetchingInfo")}
         </div>
       )}
 
@@ -820,9 +824,9 @@ export function HomeClient() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
-          { label: "진행 중", count: activeDownloads.length, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-          { label: "완료", count: completedDownloads.length, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-          { label: "오류", count: errorDownloads.length, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30" },
+          { label: t("home.statsActive"), count: activeDownloads.length, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
+          { label: t("home.statsDone"), count: completedDownloads.length, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
+          { label: t("home.statsError"), count: errorDownloads.length, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30" },
         ].map(stat => (
           <Card key={stat.label} className={cn("text-center p-3 sm:p-4", stat.bg)}>
             <p className={cn("text-xl sm:text-2xl font-bold", stat.color)}>{stat.count}</p>
@@ -834,9 +838,9 @@ export function HomeClient() {
       {/* Download List */}
       <Tabs value={activeTab} onValueChange={v => { setActiveTab(v); setPage(1); }}>
         <TabsList className="w-full">
-          <TabsTrigger value="home" className="flex-1 text-xs sm:text-sm">전체 ({downloadList.length})</TabsTrigger>
-          <TabsTrigger value="active" className="flex-1 text-xs sm:text-sm">진행 중 ({activeDownloads.length})</TabsTrigger>
-          <TabsTrigger value="done" className="flex-1 text-xs sm:text-sm">완료 ({completedDownloads.length})</TabsTrigger>
+          <TabsTrigger value="home" className="flex-1 text-xs sm:text-sm">{t("home.tabAll")} ({downloadList.length})</TabsTrigger>
+          <TabsTrigger value="active" className="flex-1 text-xs sm:text-sm">{t("home.tabActive")} ({activeDownloads.length})</TabsTrigger>
+          <TabsTrigger value="done" className="flex-1 text-xs sm:text-sm">{t("home.tabCompleted")} ({completedDownloads.length})</TabsTrigger>
         </TabsList>
 
         {(["home", "active", "done"] as const).map(tab => {
@@ -850,8 +854,8 @@ export function HomeClient() {
               {allItems.length === 0 ? (
                 <div className="text-center py-8 sm:py-12 text-muted-foreground">
                   <Download className="h-10 sm:h-12 w-10 sm:w-12 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium text-sm sm:text-base">다운로드 항목이 없습니다</p>
-                  <p className="text-xs sm:text-sm mt-1">URL을 입력하여 다운로드를 시작하세요</p>
+                  <p className="font-medium text-sm sm:text-base">{t("home.empty")}</p>
+                  <p className="text-xs sm:text-sm mt-1">{t("home.emptyHint")}</p>
                 </div>
               ) : (
                 <>

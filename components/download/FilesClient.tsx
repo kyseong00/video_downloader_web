@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatFileSize, formatDuration, getThumbnailUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface DownloadItem {
   id: string;
@@ -26,6 +27,7 @@ interface DownloadItem {
 }
 
 export function FilesClient() {
+  const { t, i18n } = useTranslation();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -62,16 +64,16 @@ export function FilesClient() {
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="파일 검색..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder={t("files.searchPlaceholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-28">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체</SelectItem>
-            <SelectItem value="VIDEO">영상</SelectItem>
-            <SelectItem value="AUDIO">오디오</SelectItem>
+            <SelectItem value="all">{t("files.typeAll")}</SelectItem>
+            <SelectItem value="VIDEO">{t("files.typeVideo")}</SelectItem>
+            <SelectItem value="AUDIO">{t("files.typeAudio")}</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex rounded-md border border-border overflow-hidden">
@@ -84,13 +86,13 @@ export function FilesClient() {
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">{filtered.length}개 파일</p>
+      <p className="text-sm text-muted-foreground">{t("files.countSuffix", { n: filtered.length })}</p>
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <FolderOpen className="h-14 w-14 mx-auto mb-4 opacity-25" />
-          <p className="text-lg font-medium">파일이 없습니다</p>
-          <p className="text-sm mt-1">다운로드 완료된 파일이 여기에 표시됩니다</p>
+          <p className="text-lg font-medium">{t("files.empty")}</p>
+          <p className="text-sm mt-1">{t("files.emptyHint")}</p>
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -156,21 +158,21 @@ export function FilesClient() {
                     <Badge variant="brand-sub" className="text-[10px] h-4">{file.format.toUpperCase()}</Badge>
                     {file.duration && <span className="text-xs text-muted-foreground">{formatDuration(file.duration)}</span>}
                     {file.fileSize && <span className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}</span>}
-                    <span className="text-xs text-muted-foreground">{new Date(file.createdAt).toLocaleDateString("ko-KR")}</span>
+                    <span className="text-xs text-muted-foreground">{new Date(file.createdAt).toLocaleDateString(i18n.language === "ko" ? "ko-KR" : "en-US")}</span>
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <a href={`/api/downloads/${file.id}/file`} target="_blank" rel="noopener noreferrer">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#598392]" title="재생">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#598392]" title={t("files.play")}>
                       <Play className="h-3.5 w-3.5" />
                     </Button>
                   </a>
                   <a href={`/api/downloads/${file.id}/file?dl=1`} download>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" title="다운로드">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" title={t("files.download")}>
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </Button>
                   </a>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => deleteMutation.mutate(file.id)} title="삭제">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => deleteMutation.mutate(file.id)} title={t("files.delete")}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

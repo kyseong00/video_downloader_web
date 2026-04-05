@@ -27,6 +27,11 @@
 Thumbs.db
 *.pem
 
+# project-local (not for public repo)
+.claude/
+ytdlp-material/
+PROJECT_STATUS.md
+
 # debug
 npm-debug.log*
 yarn-debug.log*

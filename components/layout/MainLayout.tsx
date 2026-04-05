@@ -3,17 +3,8 @@ import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { useSiteName } from "@/hooks/useSiteName";
-
-const PAGE_TITLES: Record<string, string> = {
-  "/": "홈",
-  "/downloads": "다운로드",
-  "/subscriptions": "구독",
-  "/playlists": "플레이리스트",
-  "/files": "파일",
-  "/settings": "설정",
-  "/admin": "관리자",
-};
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -25,8 +16,19 @@ export function MainLayout({ children, userName, userRole }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const siteName = useSiteName();
+  const { t } = useTranslation();
 
-  const title = Object.entries(PAGE_TITLES).find(([key]) =>
+  const pageTitles: Record<string, string> = {
+    "/": t("nav.home"),
+    "/downloads": t("nav.downloads"),
+    "/subscriptions": t("nav.subscriptions"),
+    "/playlists": t("nav.playlists"),
+    "/files": t("nav.files"),
+    "/settings": t("nav.settings"),
+    "/admin": t("nav.admin"),
+  };
+
+  const title = Object.entries(pageTitles).find(([key]) =>
     key === pathname || (key !== "/" && pathname.startsWith(key))
   )?.[1] || siteName;
 

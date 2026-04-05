@@ -20,6 +20,9 @@ export async function migrateDB() {
     await db.run(sql`UPDATE users SET status = 'APPROVED' WHERE status = 'PENDING'`);
   } catch { /* 이미 존재하면 무시 */ }
 
+  // locale 컬럼 마이그레이션
+  try { await db.run(sql`ALTER TABLE users ADD COLUMN locale TEXT`); } catch { /* ignore */ }
+
   // downloads width/height 컬럼 마이그레이션
   try { await db.run(sql`ALTER TABLE downloads ADD COLUMN width INTEGER`); } catch { /* ignore */ }
   try { await db.run(sql`ALTER TABLE downloads ADD COLUMN height INTEGER`); } catch { /* ignore */ }

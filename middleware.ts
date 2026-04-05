@@ -8,7 +8,8 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
-    (pathname === "/api/app-config" && request.method === "GET")
+    (pathname === "/api/app-config" && request.method === "GET") ||
+    pathname === "/api/user/locale"
   ) {
     return NextResponse.next();
   }

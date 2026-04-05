@@ -10,18 +10,19 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useSiteName } from "@/hooks/useSiteName";
+import { useTranslation } from "react-i18next";
 
 const navItems = [
-  { href: "/", label: "홈", icon: Home },
-  { href: "/downloads", label: "다운로드", icon: Download },
-  { href: "/subscriptions", label: "구독", icon: Rss },
-  { href: "/playlists", label: "플레이리스트", icon: ListMusic },
-  { href: "/files", label: "파일", icon: FolderOpen },
+  { href: "/", labelKey: "nav.home", icon: Home },
+  { href: "/downloads", labelKey: "nav.downloads", icon: Download },
+  { href: "/subscriptions", labelKey: "nav.subscriptions", icon: Rss },
+  { href: "/playlists", labelKey: "nav.playlists", icon: ListMusic },
+  { href: "/files", labelKey: "nav.files", icon: FolderOpen },
 ];
 
 const bottomItems = [
-  { href: "/settings", label: "설정", icon: Settings },
-  { href: "/admin", label: "관리자", icon: Shield, adminOnly: true },
+  { href: "/settings", labelKey: "nav.settings", icon: Settings },
+  { href: "/admin", labelKey: "nav.admin", icon: Shield, adminOnly: true },
 ];
 
 interface SidebarProps {
@@ -33,6 +34,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
   const pathname = usePathname();
   const siteName = useSiteName();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -87,7 +89,7 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
                 )}
               >
                 <Icon className="h-4.5 w-4.5 shrink-0" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}
@@ -114,7 +116,7 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
                 )}
               >
                 <Icon className="h-4.5 w-4.5 shrink-0" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}
@@ -127,7 +129,7 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-red-50 hover:text-red-600 transition-all duration-150"
           >
             <LogOut className="h-4.5 w-4.5 shrink-0" />
-            로그아웃
+            {t("common.logout")}
           </button>
         </div>
       </aside>

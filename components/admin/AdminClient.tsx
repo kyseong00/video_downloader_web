@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatFileSize } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface Stats {
   totalUsers: number;
@@ -35,6 +36,7 @@ interface User {
 }
 
 export function AdminClient() {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
@@ -90,20 +92,20 @@ export function AdminClient() {
       <div>
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Shield className="h-5 w-5 text-[#598392]" />
-          관리자 대시보드
+          {t("admin.dashboardTitle")}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">시스템 상태 및 사용량을 모니터링합니다</p>
+        <p className="text-sm text-muted-foreground mt-1">{t("admin.dashboardDesc")}</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
         {[
-          { icon: Download, label: "전체 다운로드", value: s.totalDownloads, color: "text-[#598392]", bg: "bg-[#598392]/10" },
-          { icon: Activity, label: "진행 중", value: s.activeDownloads, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-          { icon: CheckCircle2, label: "완료", value: s.completedDownloads, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-          { icon: AlertCircle, label: "오류", value: s.errorDownloads, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30" },
-          { icon: HardDrive, label: "저장 용량", value: formatFileSize(s.totalSize), color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30", isString: true },
-          { icon: Users, label: "사용자", value: s.totalUsers, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
+          { icon: Download, label: t("admin.statsTotalDownloads"), value: s.totalDownloads, color: "text-[#598392]", bg: "bg-[#598392]/10" },
+          { icon: Activity, label: t("admin.statsActive"), value: s.activeDownloads, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
+          { icon: CheckCircle2, label: t("admin.statsCompleted"), value: s.completedDownloads, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
+          { icon: AlertCircle, label: t("admin.statsError"), value: s.errorDownloads, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30" },
+          { icon: HardDrive, label: t("admin.statsStorage"), value: formatFileSize(s.totalSize), color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30", isString: true },
+          { icon: Users, label: t("admin.statsTotalUsers"), value: s.totalUsers, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
         ].map(stat => {
           const Icon = stat.icon;
           return (
@@ -130,7 +132,7 @@ export function AdminClient() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
               <Clock className="h-4 w-4" />
-              승인 대기 ({pendingUsers.length}명)
+              {t("admin.pendingTitle", { n: pendingUsers.length })}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -140,7 +142,7 @@ export function AdminClient() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{user.name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {user.email} · 가입 {new Date(user.createdAt).toLocaleDateString("ko-KR")}
+                      {user.email} · {t("admin.joinedAt")} {new Date(user.createdAt).toLocaleDateString(i18n.language === "ko" ? "ko-KR" : "en-US")}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">
@@ -151,21 +153,21 @@ export function AdminClient() {
                       disabled={approvalMutation.isPending}
                     >
                       <UserCheck className="h-3.5 w-3.5 mr-1" />
-                      승인
+                      {t("admin.approve")}
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
                       className="h-7 text-xs px-2"
                       onClick={() => {
-                        if (confirm(`${user.name} 계정을 거절하고 삭제하시겠습니까?`)) {
+                        if (confirm(t("admin.rejectConfirm", { name: user.name }))) {
                           deleteUserMutation.mutate(user.id);
                         }
                       }}
                       disabled={deleteUserMutation.isPending}
                     >
                       <UserX className="h-3.5 w-3.5 mr-1" />
-                      거절
+                      {t("admin.reject")}
                     </Button>
                   </div>
                 </div>
@@ -180,12 +182,12 @@ export function AdminClient() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <UserCog className="h-4 w-4 text-[#598392]" />
-            사용자 관리
+            {t("admin.users")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {approvedUsers.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">사용자가 없습니다</p>
+            <p className="text-sm text-muted-foreground text-center py-6">{t("admin.usersEmpty")}</p>
           ) : (
             <div className="space-y-2">
               {approvedUsers.map(user => (
@@ -198,8 +200,8 @@ export function AdminClient() {
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {user.email} · 다운로드 {user.downloadCount}개 ·{" "}
-                      가입 {new Date(user.createdAt).toLocaleDateString("ko-KR")}
+                      {user.email} · {t("admin.downloadsCount", { n: user.downloadCount })} ·{" "}
+                      {t("admin.joinedAt")} {new Date(user.createdAt).toLocaleDateString(i18n.language === "ko" ? "ko-KR" : "en-US")}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0 ml-3">
@@ -211,11 +213,11 @@ export function AdminClient() {
                       </DialogTrigger>
                       <DialogContent className="max-w-sm">
                         <DialogHeader>
-                          <DialogTitle>사용자 설정 — {user.name}</DialogTitle>
+                          <DialogTitle>{t("admin.userSettingsTitle", { name: user.name })}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 mt-2">
                           <div className="space-y-2">
-                            <p className="text-sm font-medium">역할 변경</p>
+                            <p className="text-sm font-medium">{t("admin.changeRole")}</p>
                             <Select
                               defaultValue={user.role}
                               onValueChange={role => roleChangeMutation.mutate({ id: user.id, role })}
@@ -234,14 +236,14 @@ export function AdminClient() {
                             variant="destructive"
                             className="w-full"
                             onClick={() => {
-                              if (confirm(`${user.name} 사용자를 삭제하시겠습니까? 모든 다운로드 기록도 삭제됩니다.`)) {
+                              if (confirm(t("admin.deleteUserConfirm", { name: user.name }))) {
                                 deleteUserMutation.mutate(user.id);
                               }
                             }}
                             disabled={deleteUserMutation.isPending}
                           >
                             <Trash2 className="h-3.5 w-3.5 mr-1" />
-                            사용자 삭제
+                            {t("admin.deleteUser")}
                           </Button>
                         </div>
                       </DialogContent>

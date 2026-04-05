@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Settings, FolderOpen, Zap, Download, Clock, Save, Loader2, Check, Cookie, Terminal, Type } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,6 +26,7 @@ interface UserSettings {
 }
 
 export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
+  const { t } = useTranslation();
   const isAdmin = userRole === "ADMIN";
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
@@ -102,9 +104,9 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Type className="h-5 w-5 text-[#598392]" />
-              <CardTitle className="text-base">사이트 이름</CardTitle>
+              <CardTitle className="text-base">{t("settings.siteName")}</CardTitle>
             </div>
-            <CardDescription>사이드바, 로그인 페이지, 브라우저 탭에 표시되는 이름입니다</CardDescription>
+            <CardDescription>{t("settings.siteNameDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form
@@ -115,7 +117,7 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
               className="space-y-3"
             >
               <div className="space-y-2">
-                <Label>사이트 이름</Label>
+                <Label>{t("settings.siteNameLabel")}</Label>
                 <Input
                   value={siteName}
                   onChange={(e) => setSiteName(e.target.value)}
@@ -134,7 +136,7 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
                     ? <Check className="h-4 w-4 mr-2" />
                     : <Save className="h-4 w-4 mr-2" />
                 }
-                {siteNameSaved ? "저장 완료! (새로고침 시 반영)" : "사이트 이름 저장"}
+                {siteNameSaved ? t("settings.siteNameSaved") : t("settings.siteNameSaveButton")}
               </Button>
             </form>
           </CardContent>
@@ -148,13 +150,13 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <FolderOpen className="h-5 w-5 text-[#598392]" />
-              <CardTitle className="text-base">다운로드 경로</CardTitle>
+              <CardTitle className="text-base">{t("settings.downloadPath")}</CardTitle>
             </div>
-            <CardDescription>파일이 저장될 기본 경로를 설정합니다</CardDescription>
+            <CardDescription>{t("settings.downloadPathDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label>저장 경로</Label>
+              <Label>{t("settings.downloadPathLabel")}</Label>
               <Input
                 value={form.downloadPath}
                 onChange={e => setForm({ ...form, downloadPath: e.target.value })}
@@ -170,14 +172,14 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Download className="h-5 w-5 text-[#598392]" />
-              <CardTitle className="text-base">다운로드 설정</CardTitle>
+              <CardTitle className="text-base">{t("settings.downloadSettings")}</CardTitle>
             </div>
-            <CardDescription>{isAdmin ? "기본 포맷, 화질, 동시 다운로드 수를 설정합니다" : "기본 포맷과 화질을 설정합니다"}</CardDescription>
+            <CardDescription>{isAdmin ? t("settings.downloadSettingsDescAdmin") : t("settings.downloadSettingsDescUser")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>기본 포맷</Label>
+                <Label>{t("settings.defaultFormat")}</Label>
                 <Select value={form.defaultFormat} onValueChange={v => setForm({ ...form, defaultFormat: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -186,7 +188,7 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>기본 화질</Label>
+                <Label>{t("settings.defaultQuality")}</Label>
                 <Select value={form.defaultQuality} onValueChange={v => setForm({ ...form, defaultQuality: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -197,11 +199,11 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
             </div>
             {isAdmin && (
             <div className="space-y-2">
-              <Label>동시 다운로드 수</Label>
+              <Label>{t("settings.maxConcurrent")}</Label>
               <Select value={String(form.maxConcurrent)} onValueChange={v => setForm({ ...form, maxConcurrent: Number(v) })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3, 5, 10].map(n => <SelectItem key={n} value={String(n)}>{n}개</SelectItem>)}
+                  {[1, 2, 3, 5, 10].map(n => <SelectItem key={n} value={String(n)}>{t("common.unit.count", { n })}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -214,31 +216,31 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-[#598392]" />
-              <CardTitle className="text-base">전체 대역폭 제한</CardTitle>
+              <CardTitle className="text-base">{t("settings.globalBandwidth")}</CardTitle>
             </div>
-            <CardDescription>모든 다운로드에 적용되는 전체 대역폭 및 동시 다운로드 수를 제한합니다</CardDescription>
+            <CardDescription>{t("settings.globalBandwidthDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>전체 동시 다운로드 수</Label>
+                <Label>{t("settings.globalConcurrent")}</Label>
                 <Select value={String(form.maxGlobalConcurrent)} onValueChange={v => setForm({ ...form, maxGlobalConcurrent: Number(v) })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {[1, 2, 3, 5, 10, 20].map(n => <SelectItem key={n} value={String(n)}>{n}개</SelectItem>)}
+                    {[1, 2, 3, 5, 10, 20].map(n => <SelectItem key={n} value={String(n)}>{t("common.unit.count", { n })}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">구독 자동 다운로드 시 동시 진행 수</p>
+                <p className="text-xs text-muted-foreground">{t("settings.globalConcurrentDesc")}</p>
               </div>
               <div className="space-y-2">
-                <Label>전체 속도 제한</Label>
+                <Label>{t("settings.globalRateLimit")}</Label>
                 <Select
                   value={form.globalRateLimit || "none"}
                   onValueChange={v => setForm({ ...form, globalRateLimit: v === "none" ? "" : v })}
                 >
-                  <SelectTrigger><SelectValue placeholder="제한 없음" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("settings.rateNone")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">제한 없음</SelectItem>
+                    <SelectItem value="none">{t("settings.rateNone")}</SelectItem>
                     <SelectItem value="500K">500 KB/s</SelectItem>
                     <SelectItem value="1M">1 MB/s</SelectItem>
                     <SelectItem value="2M">2 MB/s</SelectItem>
@@ -247,7 +249,7 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
                     <SelectItem value="50M">50 MB/s</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">개별 다운로드당 속도 제한 (전체 적용)</p>
+                <p className="text-xs text-muted-foreground">{t("settings.globalRateLimitDesc")}</p>
               </div>
             </div>
           </CardContent>
@@ -258,21 +260,21 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-[#598392]" />
-              <CardTitle className="text-base">구독 설정</CardTitle>
+              <CardTitle className="text-base">{t("settings.subscriptionSettings")}</CardTitle>
             </div>
-            <CardDescription>구독 채널 새 영상 확인 주기를 설정합니다</CardDescription>
+            <CardDescription>{t("settings.subscriptionSettingsDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label>확인 간격</Label>
+              <Label>{t("settings.checkInterval")}</Label>
               <Select value={String(form.pollInterval)} onValueChange={v => setForm({ ...form, pollInterval: Number(v) })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1800">30분</SelectItem>
-                  <SelectItem value="3600">1시간</SelectItem>
-                  <SelectItem value="7200">2시간</SelectItem>
-                  <SelectItem value="21600">6시간</SelectItem>
-                  <SelectItem value="86400">24시간</SelectItem>
+                  <SelectItem value="1800">{t("common.unit.minutes_30")}</SelectItem>
+                  <SelectItem value="3600">{t("common.unit.hours_1")}</SelectItem>
+                  <SelectItem value="7200">{t("common.unit.hours_2")}</SelectItem>
+                  <SelectItem value="21600">{t("common.unit.hours_6")}</SelectItem>
+                  <SelectItem value="86400">{t("common.unit.hours_24")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -284,13 +286,13 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Cookie className="h-5 w-5 text-[#598392]" />
-              <CardTitle className="text-base">쿠키 설정</CardTitle>
+              <CardTitle className="text-base">{t("settings.cookieSettings")}</CardTitle>
             </div>
-            <CardDescription>비공개 영상 다운로드 시 필요한 쿠키 (Netscape 형식)</CardDescription>
+            <CardDescription>{t("settings.cookieSettingsDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label>YouTube 쿠키</Label>
+              <Label>{t("settings.cookieLabel")}</Label>
               <Textarea
                 value={form.cookieContent}
                 onChange={e => setForm({ ...form, cookieContent: e.target.value })}
@@ -298,7 +300,7 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
                 className="h-24 font-mono text-xs resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                브라우저 확장 프로그램으로 내보낸 cookies.txt 내용을 붙여넣으세요
+                {t("settings.cookieHelp")}
               </p>
             </div>
           </CardContent>
@@ -309,13 +311,13 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Terminal className="h-5 w-5 text-[#598392]" />
-              <CardTitle className="text-base">고급 설정</CardTitle>
+              <CardTitle className="text-base">{t("settings.advancedSettings")}</CardTitle>
             </div>
-            <CardDescription>yt-dlp 추가 옵션 및 속도 제한을 설정합니다</CardDescription>
+            <CardDescription>{t("settings.advancedSettingsDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>추가 yt-dlp 인자</Label>
+              <Label>{t("settings.ytdlpArgs")}</Label>
               <Input
                 value={form.ytdlpArgs}
                 onChange={e => setForm({ ...form, ytdlpArgs: e.target.value })}
@@ -323,18 +325,18 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                공백으로 구분하여 여러 인자를 입력하세요
+                {t("settings.ytdlpArgsHelp")}
               </p>
             </div>
             <div className="space-y-2">
-              <Label>다운로드 속도 제한</Label>
+              <Label>{t("settings.downloadRateLimit")}</Label>
               <Select
                 value={form.rateLimit || "none"}
                 onValueChange={v => setForm({ ...form, rateLimit: v === "none" ? "" : v })}
               >
-                <SelectTrigger><SelectValue placeholder="제한 없음" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("settings.rateNone")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">제한 없음</SelectItem>
+                  <SelectItem value="none">{t("settings.rateNone")}</SelectItem>
                   <SelectItem value="500K">500 KB/s</SelectItem>
                   <SelectItem value="1M">1 MB/s</SelectItem>
                   <SelectItem value="2M">2 MB/s</SelectItem>
@@ -357,7 +359,7 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
               ? <Check className="h-4 w-4 mr-2" />
               : <Save className="h-4 w-4 mr-2" />
           }
-          {saved ? "저장 완료!" : "설정 저장"}
+          {saved ? t("common.saved") : t("settings.saveButton")}
         </Button>
       </form>
     </div>

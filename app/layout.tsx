@@ -3,7 +3,10 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { I18nProvider } from "@/components/providers/I18nProvider";
+import { SiteNameProvider } from "@/components/providers/SiteNameProvider";
 import { getSiteName } from "@/lib/app-config";
+import { getServerLocale } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteName = await getSiteName();
@@ -13,14 +16,20 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const siteName = await getSiteName();
+  const locale = await getServerLocale();
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <SessionProvider>
             <QueryProvider>
-              {children}
+              <I18nProvider locale={locale}>
+                <SiteNameProvider siteName={siteName}>
+                  {children}
+                </SiteNameProvider>
+              </I18nProvider>
             </QueryProvider>
           </SessionProvider>
         </ThemeProvider>
