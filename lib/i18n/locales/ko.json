@@ -284,7 +284,16 @@
     "deleteUser": "사용자 삭제",
     "deleteConfirm": "이 사용자를 삭제하시겠습니까?",
     "cannotModifySelf": "자신은 변경할 수 없습니다",
-    "cannotDeleteSelf": "자신은 삭제할 수 없습니다"
+    "cannotDeleteSelf": "자신은 삭제할 수 없습니다",
+    "viewDownloads": "다운로드 보기",
+    "userDownloadsTitle": "{{name}}의 다운로드",
+    "selectAll": "전체 선택",
+    "selectedCount": "{{n}}개 선택됨",
+    "deleteSelected": "선택 삭제",
+    "deleteSelectedConfirm": "선택한 {{n}}개의 다운로드를 삭제하시겠습니까? 파일도 함께 삭제됩니다.",
+    "deleteDownloadConfirm": "이 다운로드를 삭제하시겠습니까? 파일도 함께 삭제됩니다.",
+    "loading": "불러오는 중...",
+    "noDownloads": "다운로드가 없습니다"
   },
   "errors": {
     "unauthorized": "인증되지 않음",

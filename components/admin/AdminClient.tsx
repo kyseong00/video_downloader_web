@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import {
   Shield, Users, Download, HardDrive, Activity, CheckCircle2,
-  AlertCircle, Clock, Trash2, ChevronDown, UserCog, UserCheck, UserX
+  AlertCircle, Clock, Trash2, ChevronDown, UserCog, UserCheck, UserX,
+  FileVideo, FileAudio, Eye, X, Check
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatFileSize } from "@/lib/utils";
+import { formatFileSize, formatDuration } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
 interface Stats {
@@ -35,10 +36,27 @@ interface User {
   downloadCount: number;
 }
 
+interface DownloadItem {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail: string | null;
+  filePath: string | null;
+  fileSize: number | null;
+  duration: number | null;
+  format: string;
+  quality: string;
+  status: string;
+  type: string;
+  createdAt: string;
+}
+
 export function AdminClient() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [downloadsUser, setDownloadsUser] = useState<User | null>(null);
+  const [selectedDownloads, setSelectedDownloads] = useState<Set<string>>(new Set());
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["admin-stats"],
@@ -49,6 +67,12 @@ export function AdminClient() {
   const { data: userList = [] } = useQuery<User[]>({
     queryKey: ["admin-users"],
     queryFn: () => axios.get("/api/admin/users").then(r => r.data),
+  });
+
+  const { data: userDownloads = [], isLoading: downloadsLoading } = useQuery<DownloadItem[]>({
+    queryKey: ["admin-user-downloads", downloadsUser?.id],
+    queryFn: () => axios.get(`/api/admin/downloads?userId=${downloadsUser!.id}`).then(r => r.data),
+    enabled: !!downloadsUser,
   });
 
   const roleChangeMutation = useMutation({
@@ -79,6 +103,16 @@ export function AdminClient() {
     },
   });
 
+  const deleteDownloadsMutation = useMutation({
+    mutationFn: (ids: string[]) => axios.delete(`/api/admin/downloads?ids=${ids.join(",")}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-downloads", downloadsUser?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      setSelectedDownloads(new Set());
+    },
+  });
+
   const s = stats ?? {
     totalUsers: 0, totalDownloads: 0, activeDownloads: 0,
     completedDownloads: 0, errorDownloads: 0, totalSize: 0,
@@ -86,6 +120,32 @@ export function AdminClient() {
 
   const pendingUsers = userList.filter(u => u.status === "PENDING");
   const approvedUsers = userList.filter(u => u.status === "APPROVED");
+
+  const toggleSelectDownload = (id: string) => {
+    setSelectedDownloads(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedDownloads.size === userDownloads.length) {
+      setSelectedDownloads(new Set());
+    } else {
+      setSelectedDownloads(new Set(userDownloads.map(d => d.id)));
+    }
+  };
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "DONE": return "text-green-600";
+      case "ERROR": return "text-red-500";
+      case "DOWNLOADING": return "text-blue-600";
+      default: return "text-muted-foreground";
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
@@ -205,6 +265,19 @@ export function AdminClient() {
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0 ml-3">
+                    {/* View Downloads Button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-blue-600"
+                      onClick={() => {
+                        setDownloadsUser(user);
+                        setSelectedDownloads(new Set());
+                      }}
+                      title={t("admin.viewDownloads")}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
                     <Dialog open={selectedUser?.id === user.id} onOpenChange={open => setSelectedUser(open ? user : null)}>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-[#598392]">
@@ -255,6 +328,128 @@ export function AdminClient() {
           )}
         </CardContent>
       </Card>
+
+      {/* User Downloads Dialog */}
+      <Dialog open={!!downloadsUser} onOpenChange={open => { if (!open) setDownloadsUser(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              {t("admin.userDownloadsTitle", { name: downloadsUser?.name })}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Bulk Actions */}
+          {userDownloads.length > 0 && (
+            <div className="flex items-center justify-between border-b pb-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleSelectAll}
+                  className="flex items-center justify-center h-5 w-5 rounded border border-border hover:border-[#598392] transition-colors"
+                >
+                  {selectedDownloads.size === userDownloads.length && userDownloads.length > 0 ? (
+                    <Check className="h-3 w-3 text-[#598392]" />
+                  ) : null}
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  {selectedDownloads.size > 0
+                    ? t("admin.selectedCount", { n: selectedDownloads.size })
+                    : t("admin.selectAll")}
+                </span>
+              </div>
+              {selectedDownloads.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    if (confirm(t("admin.deleteSelectedConfirm", { n: selectedDownloads.size }))) {
+                      deleteDownloadsMutation.mutate(Array.from(selectedDownloads));
+                    }
+                  }}
+                  disabled={deleteDownloadsMutation.isPending}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  {t("admin.deleteSelected")}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Downloads List */}
+          <div className="overflow-y-auto flex-1 space-y-1">
+            {downloadsLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-8">{t("admin.loading")}</p>
+            ) : userDownloads.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">{t("admin.noDownloads")}</p>
+            ) : (
+              userDownloads.map(dl => (
+                <div
+                  key={dl.id}
+                  className="flex items-start gap-2 py-2 px-1 border-b border-border last:border-0 hover:bg-muted/50 rounded"
+                >
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => toggleSelectDownload(dl.id)}
+                    className="flex items-center justify-center h-5 w-5 mt-0.5 rounded border border-border hover:border-[#598392] transition-colors shrink-0"
+                  >
+                    {selectedDownloads.has(dl.id) ? (
+                      <Check className="h-3 w-3 text-[#598392]" />
+                    ) : null}
+                  </button>
+
+                  {/* Thumbnail */}
+                  <div className="w-16 h-10 rounded overflow-hidden bg-muted shrink-0">
+                    {dl.thumbnail ? (
+                      <img src={dl.thumbnail} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        {dl.type === "AUDIO" ? (
+                          <FileAudio className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <FileVideo className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{dl.title}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] h-3.5 px-1 ${statusColor(dl.status)}`}
+                      >
+                        {dl.status}
+                      </Badge>
+                      <span>{dl.format.toUpperCase()}</span>
+                      {dl.fileSize ? <span>{formatFileSize(dl.fileSize)}</span> : null}
+                      {dl.duration ? <span>{formatDuration(dl.duration)}</span> : null}
+                      <span>{new Date(dl.createdAt).toLocaleDateString(i18n.language === "ko" ? "ko-KR" : "en-US")}</span>
+                    </div>
+                  </div>
+
+                  {/* Delete single */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0"
+                    onClick={() => {
+                      if (confirm(t("admin.deleteDownloadConfirm"))) {
+                        deleteDownloadsMutation.mutate([dl.id]);
+                      }
+                    }}
+                    disabled={deleteDownloadsMutation.isPending}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

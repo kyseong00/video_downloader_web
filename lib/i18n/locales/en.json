@@ -284,7 +284,16 @@
     "deleteUser": "Delete user",
     "deleteConfirm": "Delete this user?",
     "cannotModifySelf": "You cannot modify yourself",
-    "cannotDeleteSelf": "You cannot delete yourself"
+    "cannotDeleteSelf": "You cannot delete yourself",
+    "viewDownloads": "View downloads",
+    "userDownloadsTitle": "Downloads — {{name}}",
+    "selectAll": "Select all",
+    "selectedCount": "{{n}} selected",
+    "deleteSelected": "Delete selected",
+    "deleteSelectedConfirm": "Delete {{n}} selected downloads? Files will also be removed.",
+    "deleteDownloadConfirm": "Delete this download? The file will also be removed.",
+    "loading": "Loading...",
+    "noDownloads": "No downloads"
   },
   "errors": {
     "unauthorized": "Unauthorized",
