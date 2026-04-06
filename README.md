@@ -14,6 +14,11 @@ Self-hosted YouTube downloader built with Next.js + yt-dlp.
 - Multi-user support with admin approval
 - Per-user and global concurrent download / bandwidth limits
 - Admin settings: cookies, custom yt-dlp args, site name customization
+- Admin dashboard: user management, download monitoring, storage stats per user
+- Admin file management: view, delete, and download all users' files
+- Admin password reset with forced change on next login
+- User password change in settings
+- Korean/English bilingual UI
 - Dark mode support
 
 ### Requirements
@@ -107,6 +112,11 @@ docker compose restart    # restart
 - 다중 사용자 지원 (관리자 승인 방식)
 - 사용자별/전체 동시 다운로드 및 대역폭 제한
 - 관리자 설정: 쿠키, yt-dlp 커스텀 인자, 사이트 이름 커스텀
+- 관리자 대시보드: 사용자 관리, 다운로드 모니터링, 사용자별 저장 용량 통계
+- 관리자 전체 파일 관리: 모든 사용자의 파일 조회/삭제/다운로드
+- 관리자 비밀번호 초기화 (초기화 후 강제 변경)
+- 사용자 비밀번호 변경
+- 한국어/영어 다국어 지원
 - 다크 모드 지원
 
 ### 요구사항
