@@ -5,6 +5,7 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { SiteNameProvider } from "@/components/providers/SiteNameProvider";
+import { PasswordGuard } from "@/components/providers/PasswordGuard";
 import { getSiteName } from "@/lib/app-config";
 import { getServerLocale } from "@/lib/i18n/server";
 
@@ -27,7 +28,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <QueryProvider>
               <I18nProvider locale={locale}>
                 <SiteNameProvider siteName={siteName}>
-                  {children}
+                  <PasswordGuard>
+                    {children}
+                  </PasswordGuard>
                 </SiteNameProvider>
               </I18nProvider>
             </QueryProvider>

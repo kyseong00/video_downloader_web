@@ -250,7 +250,23 @@
     "downloadRateLimit": "다운로드 속도 제한",
     "saveButton": "설정 저장",
     "language": "언어 설정",
-    "languageDesc": "사용자 인터페이스에 표시될 언어를 선택합니다"
+    "languageDesc": "사용자 인터페이스에 표시될 언어를 선택합니다",
+    "changePassword": "비밀번호 변경",
+    "changePasswordDesc": "현재 비밀번호를 입력하고 새 비밀번호로 변경합니다",
+    "currentPassword": "현재 비밀번호",
+    "currentPasswordPlaceholder": "현재 비밀번호 입력",
+    "newPassword": "새 비밀번호",
+    "newPasswordPlaceholder": "새 비밀번호 입력 (6자 이상)",
+    "confirmPassword": "새 비밀번호 확인",
+    "confirmPasswordPlaceholder": "새 비밀번호 다시 입력",
+    "changePasswordButton": "비밀번호 변경",
+    "passwordChanged": "비밀번호가 변경되었습니다",
+    "passwordMinLength": "비밀번호는 최소 6자 이상이어야 합니다",
+    "passwordMismatch": "새 비밀번호가 일치하지 않습니다"
+  },
+  "changePassword": {
+    "title": "비밀번호 변경 필요",
+    "desc": "관리자에 의해 비밀번호가 초기화되었습니다. 새 비밀번호를 설정해주세요."
   },
   "admin": {
     "title": "관리자",
@@ -298,7 +314,12 @@
     "searchDownloads": "제목 검색...",
     "cleanupErrors": "오류 정리",
     "cleanupErrorsConfirm": "오류 상태인 {{n}}개의 다운로드를 모두 삭제하시겠습니까?",
-    "userStorageTitle": "사용자별 저장 용량"
+    "userStorageTitle": "사용자별 저장 용량",
+    "resetPassword": "비밀번호 초기화",
+    "resetPasswordConfirm": "{{name}}의 비밀번호를 초기화하시겠습니까?",
+    "resetPasswordDone": "비밀번호 초기화 완료",
+    "resetPasswordInfo": "{{name}}의 임시 비밀번호입니다. 이 비밀번호는 다시 확인할 수 없습니다.",
+    "resetPasswordWarning": "이 창을 닫으면 임시 비밀번호를 다시 확인할 수 없습니다. 반드시 복사해두세요."
   },
   "adminFiles": {
     "title": "전체 파일 관리",

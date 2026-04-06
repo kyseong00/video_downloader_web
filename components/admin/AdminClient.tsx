@@ -5,7 +5,7 @@ import axios from "axios";
 import {
   Shield, Users, Download, HardDrive, Activity, CheckCircle2,
   AlertCircle, Clock, Trash2, ChevronDown, UserCog, UserCheck, UserX,
-  FileVideo, FileAudio, Eye, X, Check, Search, AlertTriangle
+  FileVideo, FileAudio, Eye, X, Check, Search, AlertTriangle, Key, Copy
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,8 @@ export function AdminClient() {
   const [selectedDownloads, setSelectedDownloads] = useState<Set<string>>(new Set());
   const [dlSearch, setDlSearch] = useState("");
   const [dlStatusFilter, setDlStatusFilter] = useState("all");
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [resetUserName, setResetUserName] = useState("");
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["admin-stats"],
@@ -104,6 +106,14 @@ export function AdminClient() {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       setSelectedUser(null);
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: (id: string) =>
+      axios.patch("/api/admin/users", { id, resetPassword: true }).then(r => r.data),
+    onSuccess: (data) => {
+      setTempPassword(data.tempPassword);
     },
   });
 
@@ -368,6 +378,20 @@ export function AdminClient() {
                               </Select>
                             </div>
                             <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => {
+                                if (confirm(t("admin.resetPasswordConfirm", { name: user.name }))) {
+                                  setResetUserName(user.name);
+                                  resetPasswordMutation.mutate(user.id);
+                                }
+                              }}
+                              disabled={resetPasswordMutation.isPending}
+                            >
+                              <Key className="h-3.5 w-3.5 mr-1" />
+                              {t("admin.resetPassword")}
+                            </Button>
+                            <Button
                               variant="destructive"
                               className="w-full"
                               onClick={() => {
@@ -548,6 +572,37 @@ export function AdminClient() {
                 </div>
               ))
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Temp Password Dialog */}
+      <Dialog open={!!tempPassword} onOpenChange={open => { if (!open) setTempPassword(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              {t("admin.resetPasswordDone")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              {t("admin.resetPasswordInfo", { name: resetUserName })}
+            </p>
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+              <code className="flex-1 text-lg font-mono font-bold tracking-wider">{tempPassword}</code>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  if (tempPassword) navigator.clipboard.writeText(tempPassword);
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-red-500">{t("admin.resetPasswordWarning")}</p>
           </div>
         </DialogContent>
       </Dialog>

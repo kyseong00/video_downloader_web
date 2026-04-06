@@ -9,8 +9,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [download] = await db.select().from(downloads)
-    .where(and(eq(downloads.id, params.id), eq(downloads.userId, session.user.id)));
+  const isAdmin = (session.user as { role?: string }).role === "ADMIN";
+
+  const [download] = isAdmin
+    ? await db.select().from(downloads).where(eq(downloads.id, params.id))
+    : await db.select().from(downloads)
+        .where(and(eq(downloads.id, params.id), eq(downloads.userId, session.user.id)));
 
   if (!download) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(download);

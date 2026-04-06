@@ -7,7 +7,9 @@ export function middleware(request: NextRequest) {
   // Public routes — allow through without auth check
   if (
     pathname.startsWith("/login") ||
+    pathname.startsWith("/change-password") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/user/password") ||
     (pathname === "/api/app-config" && request.method === "GET") ||
     pathname === "/api/user/locale"
   ) {

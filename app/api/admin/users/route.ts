@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { db, users, downloads } from "@/lib/db";
 import { eq, count } from "drizzle-orm";
 import { migrateDB } from "@/lib/db/migrate";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 async function requireAdmin() {
   const session = await auth();
@@ -47,12 +49,22 @@ export async function PATCH(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { id, role, status } = body;
+  const { id, role, status, resetPassword } = body;
 
   if (!id) return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
 
   if (id === session.user?.id) {
     return NextResponse.json({ error: "자신은 변경할 수 없습니다" }, { status: 400 });
+  }
+
+  // 비밀번호 초기화
+  if (resetPassword) {
+    const tempPassword = crypto.randomBytes(4).toString("hex"); // 8자리 랜덤
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    await db.update(users)
+      .set({ password: hashedPassword, mustChangePassword: true })
+      .where(eq(users.id, id));
+    return NextResponse.json({ success: true, tempPassword });
   }
 
   const updateData: Record<string, string> = {};

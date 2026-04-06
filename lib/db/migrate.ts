@@ -23,6 +23,9 @@ export async function migrateDB() {
   // locale 컬럼 마이그레이션
   try { await db.run(sql`ALTER TABLE users ADD COLUMN locale TEXT`); } catch { /* ignore */ }
 
+  // must_change_password 컬럼 마이그레이션
+  try { await db.run(sql`ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`); } catch { /* ignore */ }
+
   // downloads width/height 컬럼 마이그레이션
   try { await db.run(sql`ALTER TABLE downloads ADD COLUMN width INTEGER`); } catch { /* ignore */ }
   try { await db.run(sql`ALTER TABLE downloads ADD COLUMN height INTEGER`); } catch { /* ignore */ }

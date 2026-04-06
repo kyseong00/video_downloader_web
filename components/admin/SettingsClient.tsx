@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Settings, FolderOpen, Zap, Download, Clock, Save, Loader2, Check, Cookie, Terminal, Type } from "lucide-react";
+import { Settings, FolderOpen, Zap, Download, Clock, Save, Loader2, Check, Cookie, Terminal, Type, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,11 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
   const [saved, setSaved] = useState(false);
   const [siteName, setSiteName] = useState("");
   const [siteNameSaved, setSiteNameSaved] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwSaved, setPwSaved] = useState(false);
 
   const { data: appConfig } = useQuery<{ siteName: string }>({
     queryKey: ["app-config"],
@@ -91,6 +96,37 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
     },
   });
 
+  const passwordMutation = useMutation({
+    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
+      axios.patch("/api/user/password", data).then(r => r.data),
+    onSuccess: () => {
+      setPwSaved(true);
+      setPwError("");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPwSaved(false), 3000);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || t("common.error");
+      setPwError(msg);
+    },
+  });
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError("");
+    if (newPassword.length < 6) {
+      setPwError(t("settings.passwordMinLength"));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError(t("settings.passwordMismatch"));
+      return;
+    }
+    passwordMutation.mutate({ currentPassword, newPassword });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     saveMutation.mutate(form);
@@ -142,6 +178,62 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Password Change */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Lock className="h-5 w-5 text-[#598392]" />
+            <CardTitle className="text-base">{t("settings.changePassword")}</CardTitle>
+          </div>
+          <CardDescription>{t("settings.changePasswordDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordChange} className="space-y-3">
+            <div className="space-y-2">
+              <Label>{t("settings.currentPassword")}</Label>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                placeholder={t("settings.currentPasswordPlaceholder")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("settings.newPassword")}</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder={t("settings.newPasswordPlaceholder")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("settings.confirmPassword")}</Label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder={t("settings.confirmPasswordPlaceholder")}
+              />
+            </div>
+            {pwError && <p className="text-sm text-red-500">{pwError}</p>}
+            <Button
+              type="submit"
+              className="w-full h-10 bg-[#598392] hover:bg-[#4a7280] text-white"
+              disabled={passwordMutation.isPending || !currentPassword || !newPassword || !confirmPassword}
+            >
+              {passwordMutation.isPending
+                ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                : pwSaved
+                  ? <Check className="h-4 w-4 mr-2" />
+                  : <Lock className="h-4 w-4 mr-2" />
+              }
+              {pwSaved ? t("settings.passwordChanged") : t("settings.changePasswordButton")}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Download Path - Admin only */}

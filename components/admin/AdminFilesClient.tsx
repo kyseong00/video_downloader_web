@@ -311,11 +311,18 @@ export function AdminFilesClient() {
               {/* Actions */}
               <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 {dl.status === "DONE" && dl.filePath && (
-                  <a href={`/api/downloads/${dl.id}/file`} target="_blank" rel="noopener noreferrer">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-[#598392]">
-                      <Play className="h-3.5 w-3.5" />
-                    </Button>
-                  </a>
+                  <>
+                    <a href={`/api/downloads/${dl.id}/file`} target="_blank" rel="noopener noreferrer">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-[#598392]">
+                        <Play className="h-3.5 w-3.5" />
+                      </Button>
+                    </a>
+                    <a href={`/api/downloads/${dl.id}/file?dl=1`} download>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                        <DownloadIcon className="h-3.5 w-3.5" />
+                      </Button>
+                    </a>
+                  </>
                 )}
                 <Button
                   variant="ghost"

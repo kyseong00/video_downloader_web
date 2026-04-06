@@ -250,7 +250,23 @@
     "downloadRateLimit": "Download rate limit",
     "saveButton": "Save settings",
     "language": "Language",
-    "languageDesc": "Select the language for the user interface"
+    "languageDesc": "Select the language for the user interface",
+    "changePassword": "Change Password",
+    "changePasswordDesc": "Enter your current password and set a new one",
+    "currentPassword": "Current password",
+    "currentPasswordPlaceholder": "Enter current password",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "Enter new password (min 6 chars)",
+    "confirmPassword": "Confirm new password",
+    "confirmPasswordPlaceholder": "Re-enter new password",
+    "changePasswordButton": "Change password",
+    "passwordChanged": "Password changed successfully",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "passwordMismatch": "New passwords do not match"
+  },
+  "changePassword": {
+    "title": "Password Change Required",
+    "desc": "Your password was reset by an admin. Please set a new password."
   },
   "admin": {
     "title": "Admin",
@@ -298,7 +314,12 @@
     "searchDownloads": "Search by title...",
     "cleanupErrors": "Clean errors",
     "cleanupErrorsConfirm": "Delete all {{n}} errored downloads?",
-    "userStorageTitle": "Storage by User"
+    "userStorageTitle": "Storage by User",
+    "resetPassword": "Reset password",
+    "resetPasswordConfirm": "Reset password for {{name}}?",
+    "resetPasswordDone": "Password Reset Complete",
+    "resetPasswordInfo": "Temporary password for {{name}}. This password cannot be viewed again.",
+    "resetPasswordWarning": "Copy this password now. It will not be shown again after closing this dialog."
   },
   "adminFiles": {
     "title": "All Files",
