@@ -46,7 +46,8 @@
     "playlists": "플레이리스트",
     "files": "파일",
     "settings": "설정",
-    "admin": "관리자"
+    "admin": "관리자",
+    "adminFiles": "전체 파일"
   },
   "login": {
     "title": "로그인",
@@ -293,7 +294,26 @@
     "deleteSelectedConfirm": "선택한 {{n}}개의 다운로드를 삭제하시겠습니까? 파일도 함께 삭제됩니다.",
     "deleteDownloadConfirm": "이 다운로드를 삭제하시겠습니까? 파일도 함께 삭제됩니다.",
     "loading": "불러오는 중...",
-    "noDownloads": "다운로드가 없습니다"
+    "noDownloads": "다운로드가 없습니다",
+    "searchDownloads": "제목 검색...",
+    "cleanupErrors": "오류 정리",
+    "cleanupErrorsConfirm": "오류 상태인 {{n}}개의 다운로드를 모두 삭제하시겠습니까?",
+    "userStorageTitle": "사용자별 저장 용량"
+  },
+  "adminFiles": {
+    "title": "전체 파일 관리",
+    "desc": "모든 사용자의 다운로드 파일을 관리합니다",
+    "searchPlaceholder": "제목 또는 사용자 검색...",
+    "allUsers": "전체 사용자",
+    "allStatus": "전체 상태",
+    "statusDone": "완료",
+    "statusActive": "진행 중",
+    "statusError": "오류",
+    "statusPending": "대기",
+    "countSuffix": "{{n}}개 항목",
+    "empty": "파일이 없습니다",
+    "cleanupErrors": "오류 일괄 정리 ({{n}}개)",
+    "cleanupErrorsConfirm": "오류 상태인 {{n}}개의 다운로드를 모두 삭제하시겠습니까?"
   },
   "errors": {
     "unauthorized": "인증되지 않음",

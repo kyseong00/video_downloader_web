@@ -22,6 +22,7 @@ const navItems = [
 
 const bottomItems = [
   { href: "/settings", labelKey: "nav.settings", icon: Settings },
+  { href: "/admin/files", labelKey: "nav.adminFiles", icon: FolderOpen, adminOnly: true },
   { href: "/admin", labelKey: "nav.admin", icon: Shield, adminOnly: true },
 ];
 
@@ -102,7 +103,9 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
           {bottomItems.map((item) => {
             if (item.adminOnly && userRole !== "ADMIN") return null;
             const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href);
+            const isActive = item.href === "/admin"
+              ? pathname === "/admin"
+              : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}

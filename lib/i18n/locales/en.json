@@ -46,7 +46,8 @@
     "playlists": "Playlists",
     "files": "Files",
     "settings": "Settings",
-    "admin": "Admin"
+    "admin": "Admin",
+    "adminFiles": "All Files"
   },
   "login": {
     "title": "Login",
@@ -293,7 +294,26 @@
     "deleteSelectedConfirm": "Delete {{n}} selected downloads? Files will also be removed.",
     "deleteDownloadConfirm": "Delete this download? The file will also be removed.",
     "loading": "Loading...",
-    "noDownloads": "No downloads"
+    "noDownloads": "No downloads",
+    "searchDownloads": "Search by title...",
+    "cleanupErrors": "Clean errors",
+    "cleanupErrorsConfirm": "Delete all {{n}} errored downloads?",
+    "userStorageTitle": "Storage by User"
+  },
+  "adminFiles": {
+    "title": "All Files",
+    "desc": "Manage downloaded files across all users",
+    "searchPlaceholder": "Search by title or user...",
+    "allUsers": "All users",
+    "allStatus": "All status",
+    "statusDone": "Done",
+    "statusActive": "Active",
+    "statusError": "Error",
+    "statusPending": "Pending",
+    "countSuffix": "{{n}} items",
+    "empty": "No files",
+    "cleanupErrors": "Clean up errors ({{n}})",
+    "cleanupErrorsConfirm": "Delete all {{n}} errored downloads?"
   },
   "errors": {
     "unauthorized": "Unauthorized",

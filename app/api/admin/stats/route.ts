@@ -17,7 +17,22 @@ export async function GET() {
   const allDownloads = await db.select({
     status: downloads.status,
     fileSize: downloads.fileSize,
+    userId: downloads.userId,
   }).from(downloads);
+
+  // 유저별 용량 집계
+  const userStorageMap: Record<string, number> = {};
+  for (const d of allDownloads) {
+    userStorageMap[d.userId] = (userStorageMap[d.userId] ?? 0) + (d.fileSize ?? 0);
+  }
+
+  // 유저 이름 조회
+  const allUsers = await db.select({ id: users.id, name: users.name }).from(users);
+  const userStorage = allUsers.map(u => ({
+    id: u.id,
+    name: u.name,
+    size: userStorageMap[u.id] ?? 0,
+  })).filter(u => u.size > 0).sort((a, b) => b.size - a.size);
 
   const stats = {
     totalUsers,
@@ -26,6 +41,7 @@ export async function GET() {
     completedDownloads: allDownloads.filter(d => d.status === "DONE").length,
     errorDownloads: allDownloads.filter(d => d.status === "ERROR").length,
     totalSize: allDownloads.reduce((acc, d) => acc + (d.fileSize ?? 0), 0),
+    userStorage,
   };
 
   return NextResponse.json(stats);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, downloads } from "@/lib/db";
+import { db, downloads, users } from "@/lib/db";
 import { eq, inArray } from "drizzle-orm";
 import { desc } from "drizzle-orm";
 import fs from "fs";
@@ -13,22 +13,42 @@ async function requireAdmin() {
   return session;
 }
 
-// GET /api/admin/downloads?userId=xxx — 특정 사용자의 다운로드 목록
+// GET /api/admin/downloads?userId=xxx — 특정 사용자 또는 전체 다운로드 목록
 export async function GET(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
-  if (!userId) return NextResponse.json({ error: "userId 필요" }, { status: 400 });
 
-  const userDownloads = await db
-    .select()
+  const query = db
+    .select({
+      id: downloads.id,
+      url: downloads.url,
+      title: downloads.title,
+      thumbnail: downloads.thumbnail,
+      filePath: downloads.filePath,
+      fileSize: downloads.fileSize,
+      duration: downloads.duration,
+      format: downloads.format,
+      quality: downloads.quality,
+      status: downloads.status,
+      type: downloads.type,
+      error: downloads.error,
+      userId: downloads.userId,
+      createdAt: downloads.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
     .from(downloads)
-    .where(eq(downloads.userId, userId))
+    .leftJoin(users, eq(downloads.userId, users.id))
     .orderBy(desc(downloads.createdAt));
 
-  return NextResponse.json(userDownloads);
+  const result = userId
+    ? await query.where(eq(downloads.userId, userId))
+    : await query;
+
+  return NextResponse.json(result);
 }
 
 // DELETE /api/admin/downloads — 다운로드 삭제 (단일 또는 복수)

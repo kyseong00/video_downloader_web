@@ -1,15 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import {
   Shield, Users, Download, HardDrive, Activity, CheckCircle2,
   AlertCircle, Clock, Trash2, ChevronDown, UserCog, UserCheck, UserX,
-  FileVideo, FileAudio, Eye, X, Check
+  FileVideo, FileAudio, Eye, X, Check, Search, AlertTriangle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
@@ -24,6 +25,7 @@ interface Stats {
   completedDownloads: number;
   errorDownloads: number;
   totalSize: number;
+  userStorage: { id: string; name: string; size: number }[];
 }
 
 interface User {
@@ -57,6 +59,8 @@ export function AdminClient() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [downloadsUser, setDownloadsUser] = useState<User | null>(null);
   const [selectedDownloads, setSelectedDownloads] = useState<Set<string>>(new Set());
+  const [dlSearch, setDlSearch] = useState("");
+  const [dlStatusFilter, setDlStatusFilter] = useState("all");
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["admin-stats"],
@@ -116,10 +120,27 @@ export function AdminClient() {
   const s = stats ?? {
     totalUsers: 0, totalDownloads: 0, activeDownloads: 0,
     completedDownloads: 0, errorDownloads: 0, totalSize: 0,
+    userStorage: [],
   };
 
   const pendingUsers = userList.filter(u => u.status === "PENDING");
   const approvedUsers = userList.filter(u => u.status === "APPROVED");
+
+  // 다운로드 다이얼로그 필터링
+  const filteredDownloads = useMemo(() => {
+    return userDownloads.filter(d => {
+      const matchSearch = d.title.toLowerCase().includes(dlSearch.toLowerCase());
+      const matchStatus = dlStatusFilter === "all" || d.status === dlStatusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [userDownloads, dlSearch, dlStatusFilter]);
+
+  // 유저별 저장 용량 맵
+  const userStorageMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (s.userStorage || []).forEach(u => map.set(u.id, u.size));
+    return map;
+  }, [s.userStorage]);
 
   const toggleSelectDownload = (id: string) => {
     setSelectedDownloads(prev => {
@@ -131,10 +152,18 @@ export function AdminClient() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedDownloads.size === userDownloads.length) {
+    if (selectedDownloads.size === filteredDownloads.length) {
       setSelectedDownloads(new Set());
     } else {
-      setSelectedDownloads(new Set(userDownloads.map(d => d.id)));
+      setSelectedDownloads(new Set(filteredDownloads.map(d => d.id)));
+    }
+  };
+
+  const cleanupErrors = () => {
+    const errorIds = userDownloads.filter(d => d.status === "ERROR").map(d => d.id);
+    if (errorIds.length === 0) return;
+    if (confirm(t("admin.cleanupErrorsConfirm", { n: errorIds.length }))) {
+      deleteDownloadsMutation.mutate(errorIds);
     }
   };
 
@@ -185,6 +214,34 @@ export function AdminClient() {
           );
         })}
       </div>
+
+      {/* User Storage */}
+      {s.userStorage && s.userStorage.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-purple-600" />
+              {t("admin.userStorageTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {s.userStorage.map(u => {
+                const pct = s.totalSize > 0 ? (u.size / s.totalSize) * 100 : 0;
+                return (
+                  <div key={u.id} className="flex items-center gap-3">
+                    <span className="text-sm font-medium w-24 truncate">{u.name}</span>
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-20 text-right">{formatFileSize(u.size)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending Approval */}
       {pendingUsers.length > 0 && (
@@ -250,80 +307,86 @@ export function AdminClient() {
             <p className="text-sm text-muted-foreground text-center py-6">{t("admin.usersEmpty")}</p>
           ) : (
             <div className="space-y-2">
-              {approvedUsers.map(user => (
-                <div key={user.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{user.name}</p>
-                      <Badge variant={user.role === "ADMIN" ? "default" : "outline"} className="text-[10px] h-4">
-                        {user.role}
-                      </Badge>
+              {approvedUsers.map(user => {
+                const storage = userStorageMap.get(user.id);
+                return (
+                  <div key={user.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">{user.name}</p>
+                        <Badge variant={user.role === "ADMIN" ? "default" : "outline"} className="text-[10px] h-4">
+                          {user.role}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {user.email} · {t("admin.downloadsCount", { n: user.downloadCount })}
+                        {storage ? ` · ${formatFileSize(storage)}` : ""}
+                        {" "}· {t("admin.joinedAt")} {new Date(user.createdAt).toLocaleDateString(i18n.language === "ko" ? "ko-KR" : "en-US")}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {user.email} · {t("admin.downloadsCount", { n: user.downloadCount })} ·{" "}
-                      {t("admin.joinedAt")} {new Date(user.createdAt).toLocaleDateString(i18n.language === "ko" ? "ko-KR" : "en-US")}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 shrink-0 ml-3">
-                    {/* View Downloads Button */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-blue-600"
-                      onClick={() => {
-                        setDownloadsUser(user);
-                        setSelectedDownloads(new Set());
-                      }}
-                      title={t("admin.viewDownloads")}
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                    <Dialog open={selectedUser?.id === user.id} onOpenChange={open => setSelectedUser(open ? user : null)}>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-[#598392]">
-                          <UserCog className="h-3.5 w-3.5" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-sm">
-                        <DialogHeader>
-                          <DialogTitle>{t("admin.userSettingsTitle", { name: user.name })}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 mt-2">
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">{t("admin.changeRole")}</p>
-                            <Select
-                              defaultValue={user.role}
-                              onValueChange={role => roleChangeMutation.mutate({ id: user.id, role })}
-                              disabled={roleChangeMutation.isPending}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="USER">USER</SelectItem>
-                                <SelectItem value="ADMIN">ADMIN</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <Button
-                            variant="destructive"
-                            className="w-full"
-                            onClick={() => {
-                              if (confirm(t("admin.deleteUserConfirm", { name: user.name }))) {
-                                deleteUserMutation.mutate(user.id);
-                              }
-                            }}
-                            disabled={deleteUserMutation.isPending}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-1" />
-                            {t("admin.deleteUser")}
+                    <div className="flex gap-1 shrink-0 ml-3">
+                      {/* View Downloads Button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-blue-600"
+                        onClick={() => {
+                          setDownloadsUser(user);
+                          setSelectedDownloads(new Set());
+                          setDlSearch("");
+                          setDlStatusFilter("all");
+                        }}
+                        title={t("admin.viewDownloads")}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Dialog open={selectedUser?.id === user.id} onOpenChange={open => setSelectedUser(open ? user : null)}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-[#598392]">
+                            <UserCog className="h-3.5 w-3.5" />
                           </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-sm">
+                          <DialogHeader>
+                            <DialogTitle>{t("admin.userSettingsTitle", { name: user.name })}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 mt-2">
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">{t("admin.changeRole")}</p>
+                              <Select
+                                defaultValue={user.role}
+                                onValueChange={role => roleChangeMutation.mutate({ id: user.id, role })}
+                                disabled={roleChangeMutation.isPending}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="USER">USER</SelectItem>
+                                  <SelectItem value="ADMIN">ADMIN</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <Button
+                              variant="destructive"
+                              className="w-full"
+                              onClick={() => {
+                                if (confirm(t("admin.deleteUserConfirm", { name: user.name }))) {
+                                  deleteUserMutation.mutate(user.id);
+                                }
+                              }}
+                              disabled={deleteUserMutation.isPending}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1" />
+                              {t("admin.deleteUser")}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -339,15 +402,53 @@ export function AdminClient() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* Bulk Actions */}
+          {/* Search & Filter */}
           {userDownloads.length > 0 && (
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder={t("admin.searchDownloads")}
+                  value={dlSearch}
+                  onChange={e => setDlSearch(e.target.value)}
+                  className="pl-8 h-8 text-sm"
+                />
+              </div>
+              <Select value={dlStatusFilter} onValueChange={setDlStatusFilter}>
+                <SelectTrigger className="w-24 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("adminFiles.allStatus")}</SelectItem>
+                  <SelectItem value="DONE">DONE</SelectItem>
+                  <SelectItem value="ERROR">ERROR</SelectItem>
+                  <SelectItem value="DOWNLOADING">ACTIVE</SelectItem>
+                </SelectContent>
+              </Select>
+              {userDownloads.some(d => d.status === "ERROR") && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs text-red-500 border-red-200 hover:bg-red-50"
+                  onClick={cleanupErrors}
+                  disabled={deleteDownloadsMutation.isPending}
+                >
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  {t("admin.cleanupErrors")}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Bulk Actions */}
+          {filteredDownloads.length > 0 && (
             <div className="flex items-center justify-between border-b pb-2">
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleSelectAll}
                   className="flex items-center justify-center h-5 w-5 rounded border border-border hover:border-[#598392] transition-colors"
                 >
-                  {selectedDownloads.size === userDownloads.length && userDownloads.length > 0 ? (
+                  {selectedDownloads.size === filteredDownloads.length && filteredDownloads.length > 0 ? (
                     <Check className="h-3 w-3 text-[#598392]" />
                   ) : null}
                 </button>
@@ -380,10 +481,10 @@ export function AdminClient() {
           <div className="overflow-y-auto flex-1 space-y-1">
             {downloadsLoading ? (
               <p className="text-sm text-muted-foreground text-center py-8">{t("admin.loading")}</p>
-            ) : userDownloads.length === 0 ? (
+            ) : filteredDownloads.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">{t("admin.noDownloads")}</p>
             ) : (
-              userDownloads.map(dl => (
+              filteredDownloads.map(dl => (
                 <div
                   key={dl.id}
                   className="flex items-start gap-2 py-2 px-1 border-b border-border last:border-0 hover:bg-muted/50 rounded"
