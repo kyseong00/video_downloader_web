@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { migrateDB } from "./db/migrate";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {

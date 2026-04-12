@@ -1,13 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, downloads, userSettings } from "@/lib/db";
-import { eq, desc } from "drizzle-orm";
+import { db, downloads, userSettings, users } from "@/lib/db";
+import { eq, desc, asc } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 import { downloadVideo, ensureDownloadPath } from "@/lib/ytdlp";
 import { activeDownloads } from "@/lib/active-downloads";
 import path from "path";
 import fs from "fs";
 import { migrateDB } from "@/lib/db/migrate";
+
+async function getAdminSettings() {
+  const [adminUser] = await db.select().from(users).where(eq(users.role, "ADMIN"));
+  if (!adminUser) return { maxGlobalConcurrent: 3, globalRateLimit: "" };
+  const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, adminUser.id));
+  return settings ?? { maxGlobalConcurrent: 3, globalRateLimit: "" };
+}
+
+function calculatePerDownloadRate(globalRateLimit: string, concurrent: number): string {
+  if (!globalRateLimit?.trim()) return "";
+  const match = globalRateLimit.trim().match(/^(\d+(?:\.\d+)?)(K|M)$/i);
+  if (!match) return globalRateLimit;
+  const value = parseFloat(match[1]);
+  const unit = match[2].toUpperCase();
+  const per = Math.max(1, Math.round(value / concurrent));
+  return `${per}${unit}`;
+}
+
+async function startNextPending() {
+  const adminSettings = await getAdminSettings();
+  const maxConcurrent = adminSettings.maxGlobalConcurrent ?? 3;
+  if (activeDownloads.size >= maxConcurrent) return;
+
+  const [pending] = await db.select().from(downloads)
+    .where(eq(downloads.status, "PENDING"))
+    .orderBy(asc(downloads.createdAt))
+    .limit(1);
+  if (!pending) return;
+
+  const [userSettingsRow] = await db.select().from(userSettings).where(eq(userSettings.userId, pending.userId));
+  const outputDir = ensureDownloadPath(pending.userId);
+  const extraArgs = userSettingsRow?.ytdlpArgs
+    ? userSettingsRow.ytdlpArgs.trim().split(/\s+/).filter(Boolean)
+    : [];
+
+  const perDownloadRate = calculatePerDownloadRate(
+    adminSettings.globalRateLimit ?? "",
+    maxConcurrent
+  ) || userSettingsRow?.rateLimit || "";
+
+  startDownload(
+    pending.id,
+    pending.url,
+    outputDir,
+    pending.format,
+    pending.quality,
+    pending.userId,
+    userSettingsRow?.cookieContent || "",
+    extraArgs,
+    perDownloadRate,
+    true
+  );
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -62,6 +115,20 @@ export async function POST(req: NextRequest) {
       ? settings.ytdlpArgs.trim().split(/\s+/).filter(Boolean)
       : [];
 
+    // Check global concurrent limit
+    const adminSettings = await getAdminSettings();
+    const maxConcurrent = adminSettings.maxGlobalConcurrent ?? 3;
+
+    if (activeDownloads.size >= maxConcurrent) {
+      // Queue as PENDING — startNextPending will pick it up when a slot opens
+      return NextResponse.json(download, { status: 201 });
+    }
+
+    const perDownloadRate = calculatePerDownloadRate(
+      adminSettings.globalRateLimit ?? "",
+      maxConcurrent
+    ) || settings?.rateLimit || "";
+
     // Start download asynchronously
     startDownload(
       id,
@@ -72,7 +139,7 @@ export async function POST(req: NextRequest) {
       session.user.id,
       settings?.cookieContent || "",
       extraArgs,
-      settings?.rateLimit || "",
+      perDownloadRate,
       noPlaylist
     );
 
@@ -195,11 +262,13 @@ async function startDownload(
                 ...(actualFileSize ? { fileSize: actualFileSize } : {})
               })
               .where(eq(downloads.id, id));
+            startNextPending().catch(() => {});
             resolve();
           } else {
             await db.update(downloads)
               .set({ status: "ERROR", error: "다운로드 실패" })
               .where(eq(downloads.id, id));
+            startNextPending().catch(() => {});
             reject(new Error("Download failed"));
           }
         } catch (err) {
