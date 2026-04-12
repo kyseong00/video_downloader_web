@@ -231,9 +231,9 @@
     "globalBandwidth": "Global Bandwidth Limit",
     "globalBandwidthDesc": "Limit total bandwidth and concurrent downloads across all users",
     "globalConcurrent": "Global concurrent downloads",
-    "globalConcurrentDesc": "Maximum concurrent auto-downloads for subscriptions",
+    "globalConcurrentDesc": "Max concurrent downloads (manual + auto combined)",
     "globalRateLimit": "Global rate limit",
-    "globalRateLimitDesc": "Per-download speed limit (applied globally)",
+    "globalRateLimitDesc": "Total bandwidth divided across concurrent downloads",
     "rateNone": "No limit",
     "subscriptionSettings": "Subscription Settings",
     "subscriptionSettingsDesc": "Set the interval for checking new videos from subscriptions",
@@ -334,7 +334,8 @@
     "countSuffix": "{{n}} items",
     "empty": "No files",
     "cleanupErrors": "Clean up errors ({{n}})",
-    "cleanupErrorsConfirm": "Delete all {{n}} errored downloads?"
+    "cleanupErrorsConfirm": "Delete all {{n}} errored downloads?",
+    "user": "User"
   },
   "errors": {
     "unauthorized": "Unauthorized",

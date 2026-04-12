@@ -22,7 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getServerLocale();
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased overflow-hidden">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <SessionProvider>
             <QueryProvider>

@@ -59,11 +59,12 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // 썸네일 + 호버 프리뷰
-function ThumbnailPreview({ item, onClick, className, style }: {
+function ThumbnailPreview({ item, onClick, className, style, hidePlayButton }: {
   item: DownloadItem;
   onClick: () => void;
   className?: string;
   style?: React.CSSProperties;
+  hidePlayButton?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hovered, setHovered] = useState(false);
@@ -102,7 +103,7 @@ function ThumbnailPreview({ item, onClick, className, style }: {
         <video ref={videoRef} src={`/api/downloads/${item.id}/file`} muted loop playsInline preload="none"
           className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-200", hovered ? "opacity-100" : "opacity-0")} />
       )}
-      {(isDoneVideo || isDoneAudio) && (
+      {(isDoneVideo || isDoneAudio) && !hidePlayButton && (
         <div className={cn("absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity duration-200", hovered || isDoneAudio ? "opacity-100" : "opacity-0")}>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90">
             <Play className="h-4 w-4 text-black ml-0.5" fill="black" />
@@ -198,7 +199,12 @@ const ITEMS_PER_PAGE = 12;
 
 export function DownloadsClient() {
   const { t } = useTranslation();
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("viewMode_downloads") as "grid" | "list") || "list";
+    }
+    return "list";
+  });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -268,8 +274,8 @@ export function DownloadsClient() {
         </Select>
 
         <div className="flex rounded-md border border-border overflow-hidden">
-          <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" className="rounded-none h-9" onClick={() => setViewMode("list")}><List className="h-4 w-4" /></Button>
-          <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" className="rounded-none h-9" onClick={() => setViewMode("grid")}><Grid className="h-4 w-4" /></Button>
+          <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" className="rounded-none h-9" onClick={() => { setViewMode("list"); localStorage.setItem("viewMode_downloads", "list"); }}><List className="h-4 w-4" /></Button>
+          <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" className="rounded-none h-9" onClick={() => { setViewMode("grid"); localStorage.setItem("viewMode_downloads", "grid"); }}><Grid className="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -347,12 +353,43 @@ export function DownloadsClient() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {filtered.map(item => (
             <Card key={item.id} className="overflow-hidden hover:shadow-md transition-shadow group">
-              <ThumbnailPreview item={item} onClick={() => setPlayerItem(item)} className="aspect-video w-full" />
+              <div className="relative">
+                <ThumbnailPreview item={item} onClick={() => setPlayerItem(item)} className="aspect-video w-full" hidePlayButton />
+                {item.status === "DONE" && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 bg-white/90 hover:bg-white text-[#598392] rounded-full pointer-events-auto"
+                        onClick={e => { e.stopPropagation(); setPlayerItem(item); }}>
+                        <Play className="h-3.5 w-3.5" />
+                      </Button>
+                      <a href={`/api/downloads/${item.id}/file?dl=1`} download={item.title} onClick={e => e.stopPropagation()} className="pointer-events-auto">
+                        <Button size="icon" variant="ghost" className="h-8 w-8 bg-white/90 hover:bg-white text-muted-foreground rounded-full">
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                )}
+                <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button size="icon" variant="ghost" className="h-7 w-7 bg-black/50 hover:bg-red-500/80 text-white rounded-full"
+                    onClick={e => { e.stopPropagation(); setDeleteTarget(item); }}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
               <CardContent className="p-2.5 sm:p-3">
-                <p className={cn("text-xs sm:text-sm font-medium truncate", item.status === "DONE" && "cursor-pointer hover:text-[#598392]")}
-                  onClick={item.status === "DONE" ? () => setPlayerItem(item) : undefined}>
-                  {item.title || item.url}
-                </p>
+                <div className="flex items-start gap-1">
+                  <p className={cn("text-xs sm:text-sm font-medium line-clamp-2 flex-1", item.status === "DONE" && "cursor-pointer hover:text-[#598392]")}
+                    onClick={item.status === "DONE" ? () => setPlayerItem(item) : undefined}>
+                    {item.title || item.url}
+                  </p>
+                  {item.status === "DONE" && (
+                    <Button size="icon" variant="ghost" className="h-5 w-5 shrink-0 text-muted-foreground hover:text-[#598392]"
+                      onClick={() => setDetailsItem(item)}>
+                      <Info className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 mt-1">
                   <StatusBadge status={item.status} />
                   <span className="text-[10px] text-muted-foreground">{item.format.toUpperCase()}</span>
@@ -363,17 +400,6 @@ export function DownloadsClient() {
                 {["DOWNLOADING", "PROCESSING"].includes(item.status) && (
                   <Progress value={item.progress} animated className="h-1 mt-2" />
                 )}
-                <div className="flex items-center gap-1 mt-2 -mb-0.5">
-                  {item.status === "DONE" && (
-                    <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-[#598392] gap-0.5" onClick={() => setDetailsItem(item)}>
-                      <Info className="h-3 w-3" />{t("home.details")}
-                    </Button>
-                  )}
-                  <div className="flex-1" />
-                  <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-red-600 gap-0.5" onClick={() => setDeleteTarget(item)}>
-                    <Trash2 className="h-3 w-3" />{t("common.delete")}
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           ))}

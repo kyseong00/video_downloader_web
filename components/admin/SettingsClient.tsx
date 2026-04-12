@@ -32,6 +32,22 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
   const [saved, setSaved] = useState(false);
   const [siteName, setSiteName] = useState("");
   const [siteNameSaved, setSiteNameSaved] = useState(false);
+  const [globalRateLimitValue, setGlobalRateLimitValue] = useState("");
+  const [globalRateLimitUnit, setGlobalRateLimitUnit] = useState<"K" | "M">("M");
+  const [rateLimitValue, setRateLimitValue] = useState("");
+  const [rateLimitUnit, setRateLimitUnit] = useState<"K" | "M">("M");
+
+  const parseRateLimit = (rate: string) => {
+    if (!rate?.trim()) return { value: "", unit: "M" as "K" | "M" };
+    const match = rate.trim().match(/^(\d+(?:\.\d+)?)(K|M)$/i);
+    if (!match) return { value: rate, unit: "M" as "K" | "M" };
+    return { value: match[1], unit: match[2].toUpperCase() as "K" | "M" };
+  };
+
+  const buildRateLimit = (value: string, unit: string) => {
+    if (!value?.trim()) return "";
+    return `${value.trim()}${unit}`;
+  };
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -74,18 +90,27 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
   });
 
   useEffect(() => {
-    if (settings) setForm({
-      downloadPath: settings.downloadPath ?? "./public/downloads",
-      maxConcurrent: settings.maxConcurrent ?? 3,
-      defaultFormat: settings.defaultFormat ?? "mp4",
-      defaultQuality: settings.defaultQuality ?? "best",
-      pollInterval: settings.pollInterval ?? 3600,
-      ytdlpArgs: settings.ytdlpArgs ?? "",
-      rateLimit: settings.rateLimit ?? "",
-      cookieContent: settings.cookieContent ?? "",
-      globalRateLimit: settings.globalRateLimit ?? "",
-      maxGlobalConcurrent: settings.maxGlobalConcurrent ?? 3,
-    });
+    if (settings) {
+      setForm({
+        downloadPath: settings.downloadPath ?? "./public/downloads",
+        maxConcurrent: settings.maxConcurrent ?? 3,
+        defaultFormat: settings.defaultFormat ?? "mp4",
+        defaultQuality: settings.defaultQuality ?? "best",
+        pollInterval: settings.pollInterval ?? 3600,
+        ytdlpArgs: settings.ytdlpArgs ?? "",
+        rateLimit: settings.rateLimit ?? "",
+        cookieContent: settings.cookieContent ?? "",
+        globalRateLimit: settings.globalRateLimit ?? "",
+        maxGlobalConcurrent: settings.maxGlobalConcurrent ?? 3,
+      });
+      const gr = parseRateLimit(settings.globalRateLimit ?? "");
+      setGlobalRateLimitValue(gr.value);
+      setGlobalRateLimitUnit(gr.unit);
+      const rl = parseRateLimit(settings.rateLimit ?? "");
+      setRateLimitValue(rl.value);
+      setRateLimitUnit(rl.unit);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -129,7 +154,11 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveMutation.mutate(form);
+    saveMutation.mutate({
+      ...form,
+      globalRateLimit: buildRateLimit(globalRateLimitValue, globalRateLimitUnit),
+      rateLimit: buildRateLimit(rateLimitValue, rateLimitUnit),
+    });
   };
 
   return (
@@ -289,17 +318,6 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
                 </Select>
               </div>
             </div>
-            {isAdmin && (
-            <div className="space-y-2">
-              <Label>{t("settings.maxConcurrent")}</Label>
-              <Select value={String(form.maxConcurrent)} onValueChange={v => setForm({ ...form, maxConcurrent: Number(v) })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 5, 10].map(n => <SelectItem key={n} value={String(n)}>{t("common.unit.count", { n })}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            )}
           </CardContent>
         </Card>
 
@@ -326,21 +344,26 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
               </div>
               <div className="space-y-2">
                 <Label>{t("settings.globalRateLimit")}</Label>
-                <Select
-                  value={form.globalRateLimit || "none"}
-                  onValueChange={v => setForm({ ...form, globalRateLimit: v === "none" ? "" : v })}
-                >
-                  <SelectTrigger><SelectValue placeholder={t("settings.rateNone")} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t("settings.rateNone")}</SelectItem>
-                    <SelectItem value="500K">500 KB/s</SelectItem>
-                    <SelectItem value="1M">1 MB/s</SelectItem>
-                    <SelectItem value="2M">2 MB/s</SelectItem>
-                    <SelectItem value="5M">5 MB/s</SelectItem>
-                    <SelectItem value="10M">10 MB/s</SelectItem>
-                    <SelectItem value="50M">50 MB/s</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex h-9">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={globalRateLimitValue}
+                    onChange={e => setGlobalRateLimitValue(e.target.value)}
+                    placeholder={t("settings.rateNone")}
+                    className="rounded-r-none h-full flex-1 min-w-0"
+                  />
+                  <div className="flex border border-l-0 rounded-r-md overflow-hidden h-full">
+                    <button type="button" onClick={() => setGlobalRateLimitUnit("K")}
+                      className={`px-3 text-sm font-medium h-full transition-colors ${globalRateLimitUnit === "K" ? "bg-[#598392] text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+                      KB/s
+                    </button>
+                    <button type="button" onClick={() => setGlobalRateLimitUnit("M")}
+                      className={`px-3 text-sm font-medium border-l h-full transition-colors ${globalRateLimitUnit === "M" ? "bg-[#598392] text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+                      MB/s
+                    </button>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">{t("settings.globalRateLimitDesc")}</p>
               </div>
             </div>
@@ -422,20 +445,26 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
             </div>
             <div className="space-y-2">
               <Label>{t("settings.downloadRateLimit")}</Label>
-              <Select
-                value={form.rateLimit || "none"}
-                onValueChange={v => setForm({ ...form, rateLimit: v === "none" ? "" : v })}
-              >
-                <SelectTrigger><SelectValue placeholder={t("settings.rateNone")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("settings.rateNone")}</SelectItem>
-                  <SelectItem value="500K">500 KB/s</SelectItem>
-                  <SelectItem value="1M">1 MB/s</SelectItem>
-                  <SelectItem value="2M">2 MB/s</SelectItem>
-                  <SelectItem value="5M">5 MB/s</SelectItem>
-                  <SelectItem value="10M">10 MB/s</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex h-9">
+                <Input
+                  type="number"
+                  min={1}
+                  value={rateLimitValue}
+                  onChange={e => setRateLimitValue(e.target.value)}
+                  placeholder={t("settings.rateNone")}
+                  className="rounded-r-none h-full w-40"
+                />
+                <div className="flex border border-l-0 rounded-r-md overflow-hidden h-full">
+                  <button type="button" onClick={() => setRateLimitUnit("K")}
+                    className={`px-3 text-sm font-medium h-full transition-colors ${rateLimitUnit === "K" ? "bg-[#598392] text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+                    KB/s
+                  </button>
+                  <button type="button" onClick={() => setRateLimitUnit("M")}
+                    className={`px-3 text-sm font-medium border-l h-full transition-colors ${rateLimitUnit === "M" ? "bg-[#598392] text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+                    MB/s
+                  </button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>}

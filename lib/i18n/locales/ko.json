@@ -231,9 +231,9 @@
     "globalBandwidth": "전체 대역폭 제한",
     "globalBandwidthDesc": "모든 다운로드에 적용되는 전체 대역폭 및 동시 다운로드 수를 제한합니다",
     "globalConcurrent": "전체 동시 다운로드 수",
-    "globalConcurrentDesc": "구독 자동 다운로드 시 동시 진행 수",
+    "globalConcurrentDesc": "전체 다운로드 동시 진행 수 (수동 + 자동 포함)",
     "globalRateLimit": "전체 속도 제한",
-    "globalRateLimitDesc": "개별 다운로드당 속도 제한 (전체 적용)",
+    "globalRateLimitDesc": "전체 대역폭을 동시 다운로드 수로 나눠 각 다운로드에 적용",
     "rateNone": "제한 없음",
     "subscriptionSettings": "구독 설정",
     "subscriptionSettingsDesc": "구독 채널 새 영상 확인 주기를 설정합니다",
@@ -334,7 +334,8 @@
     "countSuffix": "{{n}}개 항목",
     "empty": "파일이 없습니다",
     "cleanupErrors": "오류 일괄 정리 ({{n}}개)",
-    "cleanupErrorsConfirm": "오류 상태인 {{n}}개의 다운로드를 모두 삭제하시겠습니까?"
+    "cleanupErrorsConfirm": "오류 상태인 {{n}}개의 다운로드를 모두 삭제하시겠습니까?",
+    "user": "사용자"
   },
   "errors": {
     "unauthorized": "인증되지 않음",
