@@ -49,6 +49,24 @@ id -g   # PGID
 ```
 Edit `.env` and set `NEXTAUTH_SECRET`, `PUID`, `PGID`.
 
+### Environment Variables
+
+Configure via `.env` file (recommended) or directly in `docker-compose.yml`.
+
+| Variable | Description | Default |
+|---|---|---|
+| `NEXTAUTH_SECRET` | Session encryption key **(required)** | `change-this-secret-in-production` |
+| `NEXTAUTH_URL` | Public URL of the service | `http://localhost:3033` |
+| `AUTH_URL` | Same as `NEXTAUTH_URL` | `http://localhost:3033` |
+| `PUID` / `PGID` | Host user/group ID for volume permissions | `1000` / `1000` |
+
+**If using HTTPS via reverse proxy (e.g. Nginx Proxy Manager),** set the URL to your domain:
+```env
+NEXTAUTH_URL=https://your-domain.com
+AUTH_URL=https://your-domain.com
+```
+> Without this, login will fail with "Bad request." when accessed over HTTPS.
+
 **4. Build and run**
 ```bash
 docker compose up -d --build
@@ -146,6 +164,24 @@ id -u   # PUID
 id -g   # PGID
 ```
 `.env` 파일에서 `NEXTAUTH_SECRET`, `PUID`, `PGID` 값을 입력하세요.
+
+### 환경변수 설명
+
+`.env` 파일(권장) 또는 `docker-compose.yml`에서 직접 설정할 수 있습니다.
+
+| 변수 | 설명 | 기본값 |
+|---|---|---|
+| `NEXTAUTH_SECRET` | 세션 암호화 키 **(필수)** | `change-this-secret-in-production` |
+| `NEXTAUTH_URL` | 서비스 접속 URL | `http://localhost:3033` |
+| `AUTH_URL` | `NEXTAUTH_URL`과 동일하게 설정 | `http://localhost:3033` |
+| `PUID` / `PGID` | 볼륨 권한을 위한 호스트 유저/그룹 ID | `1000` / `1000` |
+
+**리버스 프록시(예: Nginx Proxy Manager)로 HTTPS 사용 시,** 반드시 도메인으로 설정하세요:
+```env
+NEXTAUTH_URL=https://your-domain.com
+AUTH_URL=https://your-domain.com
+```
+> 설정하지 않으면 HTTPS 환경에서 로그인 시 "Bad request." 오류가 발생합니다.
 
 **4. 빌드 및 실행**
 ```bash
