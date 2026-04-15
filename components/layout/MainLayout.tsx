@@ -45,7 +45,7 @@ export function MainLayout({ children, userName, userRole }: MainLayoutProps) {
           title={title}
           userName={userName}
         />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:p-6 lg:pb-8" style={{ paddingBottom: 'max(5rem, env(safe-area-inset-bottom, 0px) + 3rem)' }}>
           {children}
         </main>
       </div>

@@ -870,7 +870,7 @@ export function HomeClient() {
 
                   {/* 페이지네이션 */}
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-1 pt-3">
+                    <div className="flex items-center justify-center gap-1 pt-3 mb-4">
                       <Button
                         variant="outline"
                         size="icon"

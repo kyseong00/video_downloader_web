@@ -408,7 +408,7 @@ export function DownloadsClient() {
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1 pt-2">
+        <div className="flex items-center justify-center gap-1 pt-2 mb-4">
           <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage <= 1} onClick={() => setPage(p => p - 1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>

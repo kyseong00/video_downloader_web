@@ -36,7 +36,7 @@ export default function ChangePasswordPage() {
     setLoading(true);
     try {
       await axios.patch("/api/user/password", { currentPassword, newPassword });
-      await update(); // 세션 갱신 (mustChangePassword -> false)
+      await update({}); // 세션 갱신 (mustChangePassword -> false)
       router.push("/");
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || t("common.error");

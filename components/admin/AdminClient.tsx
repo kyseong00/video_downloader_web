@@ -502,7 +502,7 @@ export function AdminClient() {
           )}
 
           {/* Downloads List */}
-          <div className="overflow-y-auto flex-1 space-y-1">
+          <div className="overflow-y-auto flex-1 space-y-1 pb-4">
             {downloadsLoading ? (
               <p className="text-sm text-muted-foreground text-center py-8">{t("admin.loading")}</p>
             ) : filteredDownloads.length === 0 ? (
