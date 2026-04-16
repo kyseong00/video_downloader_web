@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
           } catch { /* ignore */ }
         }
 
+        // 오래된 영상부터 다운로드하도록 역순 정렬 (채널과 동일)
+        videos.reverse();
+
         resolve({
           title: playlistTitle,
           count: videos.length,

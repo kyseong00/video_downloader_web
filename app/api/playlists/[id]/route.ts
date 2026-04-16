@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, playlists, playlistItems, downloads } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
-import { generateId } from "@/lib/utils";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -22,6 +21,21 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .where(eq(playlistItems.playlistId, params.id));
 
   return NextResponse.json({ ...pl, items });
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { isActive } = await req.json();
+
+  const [pl] = await db.update(playlists)
+    .set({ isActive })
+    .where(and(eq(playlists.id, params.id), eq(playlists.userId, session.user.id)))
+    .returning();
+
+  if (!pl) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(pl);
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {

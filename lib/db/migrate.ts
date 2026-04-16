@@ -84,10 +84,22 @@ export async function migrateDB() {
   await db.run(sql`CREATE TABLE IF NOT EXISTS playlists (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    playlist_url TEXT NOT NULL DEFAULT '',
+    format TEXT NOT NULL DEFAULT 'mp4',
+    quality TEXT NOT NULL DEFAULT 'best',
+    is_active INTEGER NOT NULL DEFAULT 1,
+    last_checked TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  // playlists 테이블 마이그레이션
+  try { await db.run(sql`ALTER TABLE playlists ADD COLUMN playlist_url TEXT NOT NULL DEFAULT ''`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE playlists ADD COLUMN format TEXT NOT NULL DEFAULT 'mp4'`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE playlists ADD COLUMN quality TEXT NOT NULL DEFAULT 'best'`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE playlists ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE playlists ADD COLUMN last_checked TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP`); } catch { /* ignore */ }
 
   await db.run(sql`CREATE TABLE IF NOT EXISTS playlist_items (
     id TEXT PRIMARY KEY,

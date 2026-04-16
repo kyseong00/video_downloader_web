@@ -55,6 +55,11 @@ export const subscriptions = sqliteTable("subscriptions", {
 export const playlists = sqliteTable("playlists", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  playlistUrl: text("playlist_url").notNull(),
+  format: text("format").notNull().default("mp4"),
+  quality: text("quality").notNull().default("best"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  lastChecked: text("last_checked").notNull().default(sql`CURRENT_TIMESTAMP`),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
