@@ -223,6 +223,8 @@ export async function checkUserSubscriptions(
   for (const sub of subs) {
     try {
       const videos = await getLatestVideos(sub.channelUrl, cookieContent || undefined, maxVideos);
+      // 오래된 영상부터 다운로드하도록 역순 정렬
+      videos.reverse();
 
       for (const video of videos) {
         const vid = extractVideoId(video.url);

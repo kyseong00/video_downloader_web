@@ -321,6 +321,7 @@ export async function getChannelInfo(url: string): Promise<{
   return new Promise((resolve, reject) => {
     const proc = spawn("yt-dlp", [
       "--dump-json",
+      "--flat-playlist",
       "--playlist-items", "1",
       "--no-warnings",
       url,
@@ -328,29 +329,88 @@ export async function getChannelInfo(url: string): Promise<{
 
     let output = "";
     proc.stdout.on("data", (d: Buffer) => (output += d.toString()));
-    proc.on("close", (code) => {
+    proc.on("close", async (code) => {
       if (code !== 0) {
         reject(new Error("Failed to get channel info"));
         return;
       }
       try {
-        const lines = output.trim().split("\n");
+        const lines = output.trim().split("\n").filter(l => l.trim());
+        if (lines.length === 0) {
+          reject(new Error("No channel info returned"));
+          return;
+        }
         const info = JSON.parse(lines[0]);
-        let channelUrl = info.channel_url || url;
+
+        // 채널 URL 구성
+        let channelUrl = info.playlist_webpage_url || info.channel_url || url;
         // 채널 URL에 /videos가 없으면 추가 (전체 영상 목록 접근용)
         if (channelUrl.includes("youtube.com") && !channelUrl.endsWith("/videos")) {
           channelUrl = channelUrl.replace(/\/?$/, "/videos");
         }
+
+        const channelId = info.playlist_channel_id || info.channel_id || info.uploader_id || info.id;
+        const channelName = info.playlist_channel || info.channel || info.uploader || info.title;
+
+        // 채널 아바타 가져오기 (채널 페이지 HTML에서 추출)
+        let channelThumb = "";
+        try {
+          const channelPageUrl = info.uploader_url || `https://www.youtube.com/channel/${channelId}`;
+          console.log('[getChannelInfo] Fetching avatar from:', channelPageUrl);
+          channelThumb = await new Promise<string>((resolveAvatar) => {
+            const curlProc = spawn("curl", ["-s", channelPageUrl]);
+            let html = "";
+            curlProc.stdout.on("data", (d: Buffer) => (html += d.toString()));
+            curlProc.on("close", () => {
+              // yt3.googleusercontent.com 또는 yt3.ggpht.com URL 추출
+              const match = html.match(/(yt3\.googleusercontent\.com|yt3\.ggpht\.com)[^"'\s]*/);
+              const avatarUrl = match ? `https://${match[0]}` : "";
+              console.log('[getChannelInfo] Avatar URL:', avatarUrl || 'NOT FOUND');
+              resolveAvatar(avatarUrl);
+            });
+            curlProc.on("error", (err) => {
+              console.error('[getChannelInfo] curl error:', err);
+              resolveAvatar("");
+            });
+          });
+        } catch (err) {
+          // 아바타 가져오기 실패해도 계속 진행
+          console.error('[getChannelInfo] Avatar fetch error:', err);
+          channelThumb = "";
+        }
+
         resolve({
-          id: info.channel_id || info.uploader_id,
-          channel: info.channel || info.uploader,
+          id: channelId,
+          channel: channelName,
           channel_url: channelUrl,
-          thumbnail: info.thumbnail || "",
+          thumbnail: channelThumb,
         });
-      } catch {
-        reject(new Error("Failed to parse channel info"));
+      } catch (err) {
+        reject(new Error("Failed to parse channel info: " + String(err)));
       }
     });
     proc.on("error", () => reject(new Error("yt-dlp not found")));
+  });
+}
+
+export async function getChannelAvatar(channelUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const proc = spawn("curl", ["-s", channelUrl]);
+      let html = "";
+      proc.stdout.on("data", (d: Buffer) => (html += d.toString()));
+      proc.on("close", () => {
+        // yt3.ggpht.com URL 추출 (첫 번째 것이 채널 아바타)
+        const match = html.match(/yt3\.ggpht\.com[^"'\s]*/);
+        if (match) {
+          resolve(`https://${match[0]}`);
+        } else {
+          resolve("");
+        }
+      });
+      proc.on("error", () => resolve(""));
+    } catch {
+      resolve("");
+    }
   });
 }
