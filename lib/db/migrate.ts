@@ -42,6 +42,17 @@ export async function migrateDB() {
   try { await db.run(sql`ALTER TABLE user_settings ADD COLUMN global_rate_limit TEXT NOT NULL DEFAULT ''`); } catch { /* ignore */ }
   try { await db.run(sql`ALTER TABLE user_settings ADD COLUMN max_global_concurrent INTEGER NOT NULL DEFAULT 3`); } catch { /* ignore */ }
 
+  // subscriptions 신규 채널 최초 다운로드 개수 제한
+  try { await db.run(sql`ALTER TABLE subscriptions ADD COLUMN initial_max_videos INTEGER NOT NULL DEFAULT 10`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE subscriptions ADD COLUMN first_check_done INTEGER NOT NULL DEFAULT 0`); } catch { /* ignore */ }
+  // 기존 구독은 이미 초기 체크가 끝났다고 가정 (한 번에 재다운로드 폭주 방지)
+  try { await db.run(sql`UPDATE subscriptions SET first_check_done = 1 WHERE first_check_done = 0`); } catch { /* ignore */ }
+
+  // playlists도 동일 정책 적용
+  try { await db.run(sql`ALTER TABLE playlists ADD COLUMN initial_max_videos INTEGER NOT NULL DEFAULT 10`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE playlists ADD COLUMN first_check_done INTEGER NOT NULL DEFAULT 0`); } catch { /* ignore */ }
+  try { await db.run(sql`UPDATE playlists SET first_check_done = 1 WHERE first_check_done = 0`); } catch { /* ignore */ }
+
   await db.run(sql`CREATE TABLE IF NOT EXISTS downloads (
     id TEXT PRIMARY KEY,
     url TEXT NOT NULL,
@@ -74,6 +85,8 @@ export async function migrateDB() {
     is_active INTEGER NOT NULL DEFAULT 1,
     format TEXT NOT NULL DEFAULT 'mp4',
     quality TEXT NOT NULL DEFAULT 'best',
+    initial_max_videos INTEGER NOT NULL DEFAULT 10,
+    first_check_done INTEGER NOT NULL DEFAULT 0,
     last_checked TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -88,6 +101,8 @@ export async function migrateDB() {
     format TEXT NOT NULL DEFAULT 'mp4',
     quality TEXT NOT NULL DEFAULT 'best',
     is_active INTEGER NOT NULL DEFAULT 1,
+    initial_max_videos INTEGER NOT NULL DEFAULT 10,
+    first_check_done INTEGER NOT NULL DEFAULT 0,
     last_checked TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,

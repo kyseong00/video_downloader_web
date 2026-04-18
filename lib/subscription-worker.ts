@@ -101,21 +101,43 @@ export async function startSubscriptionDownload(
     // 글로벌 rate limit이 있으면 개별 rate limit보다 우선
     const rateLimit = settings?.globalRateLimit || settings?.rateLimit || undefined;
 
+    // 진행률 DB write 쓰로틀 — 1% 변화 또는 2초마다만 업데이트 (SQLite writer 락 경합 완화)
+    let lastWrittenProgress = -1;
+    let lastWriteTime = 0;
+    let pendingProgressWrite: ReturnType<typeof setTimeout> | null = null;
+
+    const flushProgress = async (progress: number, speed?: string, eta?: string) => {
+      lastWrittenProgress = progress;
+      lastWriteTime = Date.now();
+      await db.update(downloads)
+        .set({
+          progress,
+          status: "DOWNLOADING",
+          ...(speed !== undefined ? { speed } : {}),
+          ...(eta !== undefined ? { eta } : {}),
+        })
+        .where(eq(downloads.id, id));
+    };
+
     const dl = downloadVideo(url, outputDir, {
       format,
       quality,
       cookieContent: settings?.cookieContent || undefined,
       extraArgs: extraArgs.length > 0 ? extraArgs : undefined,
       rateLimit: rateLimit || undefined,
-      onProgress: async (progress, speed, eta) => {
-        await db.update(downloads)
-          .set({
-            progress,
-            status: "DOWNLOADING",
-            ...(speed !== undefined ? { speed } : {}),
-            ...(eta !== undefined ? { eta } : {}),
-          })
-          .where(eq(downloads.id, id));
+      onProgress: (progress, speed, eta) => {
+        const now = Date.now();
+        const progressDelta = Math.abs(progress - lastWrittenProgress);
+        const timeDelta = now - lastWriteTime;
+        if (progressDelta >= 1 || timeDelta >= 2000) {
+          if (pendingProgressWrite) { clearTimeout(pendingProgressWrite); pendingProgressWrite = null; }
+          flushProgress(progress, speed, eta).catch(() => {});
+        } else if (!pendingProgressWrite) {
+          pendingProgressWrite = setTimeout(() => {
+            pendingProgressWrite = null;
+            flushProgress(progress, speed, eta).catch(() => {});
+          }, 2000);
+        }
       },
       onInfo: async (info) => {
         const raw = info as unknown as Record<string, unknown>;
@@ -133,6 +155,7 @@ export async function startSubscriptionDownload(
 
     await new Promise<void>((resolve, reject) => {
       dl.process.on("close", async (code) => {
+        if (pendingProgressWrite) { clearTimeout(pendingProgressWrite); pendingProgressWrite = null; }
         if (code === 0) {
           const [current] = await db.select().from(downloads).where(eq(downloads.id, id));
           let actualFileSize = current?.fileSize;
@@ -212,7 +235,6 @@ export async function checkUserSubscriptions(
     existingIds.add(d.url);
   }
 
-  const maxVideos = options?.fetchAll ? undefined : 30;
   const maxConcurrent = settings.maxGlobalConcurrent ?? 3;
   const outputDir = ensureDownloadPath(userId);
   const cookieContent = settings.cookieContent || "";
@@ -222,7 +244,14 @@ export async function checkUserSubscriptions(
 
   for (const sub of subs) {
     try {
-      const videos = await getLatestVideos(sub.channelUrl, cookieContent || undefined, maxVideos);
+      // 신규 채널(최초 체크 전)은 initialMaxVideos만큼만 — 사이트 응답 보호.
+      // 기존 채널은 fetchAll이면 전체, 아니면 30개까지.
+      const isFirstCheck = !sub.firstCheckDone;
+      const channelMaxVideos = isFirstCheck
+        ? (sub.initialMaxVideos ?? 10)
+        : (options?.fetchAll ? undefined : 30);
+
+      const videos = await getLatestVideos(sub.channelUrl, cookieContent || undefined, channelMaxVideos);
       // 오래된 영상부터 다운로드하도록 역순 정렬
       videos.reverse();
 
@@ -249,7 +278,7 @@ export async function checkUserSubscriptions(
       }
 
       await db.update(subscriptions)
-        .set({ lastChecked: new Date().toISOString() })
+        .set({ lastChecked: new Date().toISOString(), firstCheckDone: true })
         .where(eq(subscriptions.id, sub.id));
     } catch (err) {
       console.error(`Subscription check error for ${sub.channelName}:`, err);

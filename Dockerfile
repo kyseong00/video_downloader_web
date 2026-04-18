@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y python3 ffmpeg curl && \
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install && npm install @next/swc-linux-x64-gnu --no-save
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1

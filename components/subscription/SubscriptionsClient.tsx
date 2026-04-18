@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Rss, Plus, Trash2, Loader2, Video, RefreshCw } from "lucide-react";
+import { Rss, Plus, Trash2, Loader2, Video, RefreshCw, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +28,7 @@ interface Subscription {
 export function SubscriptionsClient() {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<Subscription | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState({ url: "", format: "mp4", quality: "best" });
   const queryClient = useQueryClient();
@@ -182,6 +183,15 @@ export function SubscriptionsClient() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-[#598392]"
+                      onClick={() => setDetailTarget(sub)}
+                      title={t("subscription.viewDetails")}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-[#598392]"
                       onClick={() => checkMutation.mutate(sub.id)}
                       disabled={checkMutation.isPending || !sub.isActive}
                       title={t("subscription.checkNewVideos")}
@@ -210,6 +220,15 @@ export function SubscriptionsClient() {
                     variant="ghost"
                     size="sm"
                     className="h-7 px-2 text-xs text-muted-foreground hover:text-[#598392]"
+                    onClick={() => setDetailTarget(sub)}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    {t("subscription.details")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-[#598392]"
                     onClick={() => checkMutation.mutate(sub.id)}
                     disabled={checkMutation.isPending || !sub.isActive}
                   >
@@ -231,6 +250,65 @@ export function SubscriptionsClient() {
           ))}
         </div>
       )}
+
+      {/* 상세보기 다이얼로그 */}
+      <Dialog open={!!detailTarget} onOpenChange={() => setDetailTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Rss className="h-4 w-4 text-[#598392]" />
+              {t("subscription.details")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+                {detailTarget?.channelThumb
+                  ? <img src={detailTarget.channelThumb} alt="" className="w-full h-full object-cover" />
+                  : <Video className="h-5 w-5 text-muted-foreground" />
+                }
+              </div>
+              <div className="min-w-0">
+                <p className="text-muted-foreground text-xs mb-0.5">{t("subscription.channelName")}</p>
+                <p className="font-medium truncate">{detailTarget?.channelName}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-1">{t("subscription.channelUrl")}</p>
+              <a
+                href={detailTarget?.channelUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#598392] hover:underline break-all flex items-center gap-1"
+              >
+                {detailTarget?.channelUrl}
+                <ExternalLink className="h-3 w-3 shrink-0" />
+              </a>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-muted-foreground mb-1">{t("subscription.format")}</p>
+                <Badge variant="brand-sub">{detailTarget?.format.toUpperCase()}</Badge>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1">{t("subscription.quality")}</p>
+                <p className="font-medium">{detailTarget?.quality}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-1">{t("subscription.lastChecked")}</p>
+              <p className="font-medium">
+                {detailTarget?.lastChecked
+                  ? new Date(detailTarget.lastChecked).toLocaleString(i18n.language === "ko" ? "ko-KR" : "en-US")
+                  : "-"}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailTarget(null)} className="w-full">{t("common.close")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 삭제 확인 다이얼로그 */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

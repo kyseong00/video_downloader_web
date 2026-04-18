@@ -19,5 +19,12 @@ if (dbUrl.startsWith("file:")) {
 
 const client = createClient({ url: dbUrl });
 
+// SQLite writer/reader 동시성 확보 — 다운로드 progress가 사이트 접속을 막지 않도록.
+if (dbUrl.startsWith("file:")) {
+  client.execute("PRAGMA journal_mode=WAL").catch(() => {});
+  client.execute("PRAGMA synchronous=NORMAL").catch(() => {});
+  client.execute("PRAGMA busy_timeout=5000").catch(() => {});
+}
+
 export const db = drizzle(client, { schema });
 export * from "./schema";

@@ -175,7 +175,12 @@
     "emptyHint": "Add a channel to auto-download new videos",
     "autoDownload": "Auto-download",
     "format": "Format",
-    "quality": "Quality"
+    "quality": "Quality",
+    "initialMaxVideos": "Initial download count",
+    "initialMaxVideosHint": "Maximum number of videos to fetch when adding a subscription (default 10). Subsequent checks only fetch new videos.",
+    "viewDetails": "View details",
+    "details": "Details",
+    "channelName": "Channel name"
   },
   "playlist": {
     "title": "Playlists",
@@ -255,6 +260,8 @@
     "rateNone": "No limit",
     "subscriptionSettings": "Subscription Settings",
     "subscriptionSettingsDesc": "Set the interval for checking new videos from subscriptions",
+    "defaultInitialMaxVideos": "Initial download count for new subscriptions/playlists",
+    "defaultInitialMaxVideosDesc": "Maximum number of videos to fetch when a subscription or playlist is first added (admin-only, default 10).",
     "checkInterval": "Check interval",
     "cookieSettings": "Cookie Settings",
     "cookieSettingsDesc": "Cookies required to download private videos (Netscape format)",

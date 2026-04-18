@@ -32,6 +32,8 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
   const [saved, setSaved] = useState(false);
   const [siteName, setSiteName] = useState("");
   const [siteNameSaved, setSiteNameSaved] = useState(false);
+  const [defaultInitialMaxVideos, setDefaultInitialMaxVideos] = useState<number>(10);
+  const [defaultInitialMaxVideosSaved, setDefaultInitialMaxVideosSaved] = useState(false);
   const [globalRateLimitValue, setGlobalRateLimitValue] = useState("");
   const [globalRateLimitUnit, setGlobalRateLimitUnit] = useState<"K" | "M">("M");
   const [rateLimitValue, setRateLimitValue] = useState("");
@@ -54,13 +56,16 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
   const [pwError, setPwError] = useState("");
   const [pwSaved, setPwSaved] = useState(false);
 
-  const { data: appConfig } = useQuery<{ siteName: string }>({
+  const { data: appConfig } = useQuery<{ siteName: string; defaultInitialMaxVideos?: number }>({
     queryKey: ["app-config"],
     queryFn: () => axios.get("/api/app-config").then(r => r.data),
   });
 
   useEffect(() => {
     if (appConfig?.siteName) setSiteName(appConfig.siteName);
+    if (typeof appConfig?.defaultInitialMaxVideos === "number") {
+      setDefaultInitialMaxVideos(appConfig.defaultInitialMaxVideos);
+    }
   }, [appConfig]);
 
   const siteNameMutation = useMutation({
@@ -68,6 +73,15 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
     onSuccess: () => {
       setSiteNameSaved(true);
       setTimeout(() => setSiteNameSaved(false), 2000);
+      queryClient.invalidateQueries({ queryKey: ["app-config"] });
+    },
+  });
+
+  const initialMaxVideosMutation = useMutation({
+    mutationFn: (n: number) => axios.patch("/api/app-config", { defaultInitialMaxVideos: n }).then(r => r.data),
+    onSuccess: () => {
+      setDefaultInitialMaxVideosSaved(true);
+      setTimeout(() => setDefaultInitialMaxVideosSaved(false), 2000);
       queryClient.invalidateQueries({ queryKey: ["app-config"] });
     },
   });
@@ -392,6 +406,42 @@ export function SettingsClient({ userRole = "USER" }: { userRole?: string }) {
                   <SelectItem value="86400">{t("common.unit.hours_24")}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </CardContent>
+        </Card>}
+
+        {/* Default Initial Max Videos - Admin only */}
+        {isAdmin && <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-[#598392]" />
+              <CardTitle className="text-base">{t("settings.defaultInitialMaxVideos")}</CardTitle>
+            </div>
+            <CardDescription>{t("settings.defaultInitialMaxVideosDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Input
+                type="number"
+                min={0}
+                max={500}
+                value={defaultInitialMaxVideos}
+                onChange={e => setDefaultInitialMaxVideos(Math.max(0, Math.min(500, Number(e.target.value) || 0)))}
+              />
+              <Button
+                type="button"
+                className="w-full h-10 bg-[#598392] hover:bg-[#4a7280] text-white"
+                disabled={initialMaxVideosMutation.isPending}
+                onClick={() => initialMaxVideosMutation.mutate(defaultInitialMaxVideos)}
+              >
+                {initialMaxVideosMutation.isPending
+                  ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  : defaultInitialMaxVideosSaved
+                    ? <Check className="h-4 w-4 mr-2" />
+                    : <Save className="h-4 w-4 mr-2" />
+                }
+                {defaultInitialMaxVideosSaved ? t("common.saved") : t("common.save")}
+              </Button>
             </div>
           </CardContent>
         </Card>}
