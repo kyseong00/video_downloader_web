@@ -48,6 +48,11 @@ export async function migrateDB() {
   // 기존 구독은 이미 초기 체크가 끝났다고 가정 (한 번에 재다운로드 폭주 방지)
   try { await db.run(sql`UPDATE subscriptions SET first_check_done = 1 WHERE first_check_done = 0`); } catch { /* ignore */ }
 
+  // downloads 소스 구분 컬럼 — 신규 레코드만 채워짐. 기존 NULL은 "모든 소스 공통"으로 취급.
+  try { await db.run(sql`ALTER TABLE downloads ADD COLUMN source TEXT`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE downloads ADD COLUMN subscription_id TEXT`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE downloads ADD COLUMN playlist_id TEXT`); } catch { /* ignore */ }
+
   // playlists도 동일 정책 적용
   try { await db.run(sql`ALTER TABLE playlists ADD COLUMN initial_max_videos INTEGER NOT NULL DEFAULT 10`); } catch { /* ignore */ }
   try { await db.run(sql`ALTER TABLE playlists ADD COLUMN first_check_done INTEGER NOT NULL DEFAULT 0`); } catch { /* ignore */ }
@@ -71,6 +76,9 @@ export async function migrateDB() {
     speed TEXT,
     eta TEXT,
     error TEXT,
+    source TEXT,
+    subscription_id TEXT,
+    playlist_id TEXT,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -129,6 +137,33 @@ export async function migrateDB() {
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL DEFAULT ''
   )`);
+
+  await db.run(sql`CREATE TABLE IF NOT EXISTS deleted_videos (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    source TEXT NOT NULL,
+    video_id TEXT NOT NULL,
+    url TEXT NOT NULL DEFAULT '',
+    subscription_id TEXT,
+    playlist_id TEXT,
+    deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  try { await db.run(sql`ALTER TABLE deleted_videos ADD COLUMN subscription_id TEXT`); } catch { /* ignore */ }
+  try { await db.run(sql`ALTER TABLE deleted_videos ADD COLUMN playlist_id TEXT`); } catch { /* ignore */ }
+  try { await db.run(sql`CREATE INDEX IF NOT EXISTS idx_deleted_videos_user_source ON deleted_videos (user_id, source, video_id)`); } catch { /* ignore */ }
+
+  // v1.8.0 재추가 불가 버그 수정 — 삭제된 구독/플레이리스트에 묶인 삭제 이력/고아 다운로드 정리 (1회)
+  try {
+    const res = await db.run(sql`SELECT value FROM app_config WHERE key = 'orphanCleanupDone_v180' LIMIT 1`);
+    const rows = (res as unknown as { rows?: unknown[] }).rows ?? [];
+    if (rows.length === 0) {
+      try { await db.run(sql`DELETE FROM deleted_videos WHERE source = 'PLAYLIST' AND (playlist_id IS NULL OR playlist_id NOT IN (SELECT id FROM playlists))`); } catch { /* ignore */ }
+      try { await db.run(sql`DELETE FROM deleted_videos WHERE source = 'SUBSCRIPTION' AND (subscription_id IS NULL OR subscription_id NOT IN (SELECT id FROM subscriptions))`); } catch { /* ignore */ }
+      try { await db.run(sql`DELETE FROM downloads WHERE source = 'PLAYLIST' AND playlist_id IS NOT NULL AND playlist_id NOT IN (SELECT id FROM playlists)`); } catch { /* ignore */ }
+      try { await db.run(sql`DELETE FROM downloads WHERE source = 'SUBSCRIPTION' AND subscription_id IS NOT NULL AND subscription_id NOT IN (SELECT id FROM subscriptions)`); } catch { /* ignore */ }
+      await db.run(sql`INSERT OR REPLACE INTO app_config (key, value) VALUES ('orphanCleanupDone_v180', '1')`);
+    }
+  } catch { /* ignore */ }
 
   await db.run(sql`CREATE TABLE IF NOT EXISTS user_settings (
     id TEXT PRIMARY KEY,

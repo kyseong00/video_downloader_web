@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
       type: type as "VIDEO" | "AUDIO",
       status: "PENDING",
       progress: 0,
+      source: "MANUAL",
       userId: session.user.id,
     }).returning();
 

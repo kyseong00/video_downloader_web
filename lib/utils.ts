@@ -64,3 +64,9 @@ export function getStatusLabel(status: string): string {
     default: return status;
   }
 }
+
+/** YouTube URL에서 video ID를 추출. 실패 시 null. */
+export function extractVideoId(url: string): string | null {
+  const m = url.match(/(?:v=|\/watch\?v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}

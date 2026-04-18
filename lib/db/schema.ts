@@ -32,6 +32,9 @@ export const downloads = sqliteTable("downloads", {
   speed: text("speed"),
   eta: text("eta"),
   error: text("error"),
+  source: text("source", { enum: ["MANUAL", "SUBSCRIPTION", "PLAYLIST"] }),
+  subscriptionId: text("subscription_id"),
+  playlistId: text("playlist_id"),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -96,4 +99,15 @@ export const userSettings = sqliteTable("user_settings", {
 export const appConfig = sqliteTable("app_config", {
   key: text("key").primaryKey(),
   value: text("value").notNull().default(""),
+});
+
+export const deletedVideos = sqliteTable("deleted_videos", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  source: text("source", { enum: ["MANUAL", "SUBSCRIPTION", "PLAYLIST"] }).notNull(),
+  videoId: text("video_id").notNull(),
+  url: text("url").notNull().default(""),
+  subscriptionId: text("subscription_id"),
+  playlistId: text("playlist_id"),
+  deletedAt: text("deleted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

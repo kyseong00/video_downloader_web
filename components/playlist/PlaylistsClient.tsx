@@ -30,6 +30,7 @@ export function PlaylistsClient() {
   const [open, setOpen] = useState(false);
   const [detailTarget, setDetailTarget] = useState<Playlist | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteFiles, setDeleteFiles] = useState(false);
   const [form, setForm] = useState({ name: "", playlistUrl: "", format: "mp4", quality: "best" });
   const queryClient = useQueryClient();
 
@@ -44,8 +45,12 @@ export function PlaylistsClient() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => axios.delete(`/api/playlists/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["playlists"] }),
+    mutationFn: ({ id, deleteFiles }: { id: string; deleteFiles: boolean }) =>
+      axios.delete(`/api/playlists/${id}${deleteFiles ? "?deleteFiles=1" : ""}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      queryClient.invalidateQueries({ queryKey: ["downloads"] });
+    },
   });
 
   const toggleMutation = useMutation({
@@ -300,7 +305,7 @@ export function PlaylistsClient() {
       </Dialog>
 
       {/* 삭제 확인 다이얼로그 */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteFiles(false); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
@@ -311,14 +316,24 @@ export function PlaylistsClient() {
           <p className="text-sm text-muted-foreground">
             {t("playlist.deleteMessage", { name: deleteTarget?.name ?? "" })}
           </p>
+          <label className="flex items-start gap-2 text-sm cursor-pointer select-none py-1">
+            <input
+              type="checkbox"
+              checked={deleteFiles}
+              onChange={(e) => setDeleteFiles(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#598392] cursor-pointer"
+            />
+            <span>{t("playlist.deleteFilesAlso")}</span>
+          </label>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 sm:flex-none">{t("common.cancel")}</Button>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteFiles(false); }} className="flex-1 sm:flex-none">{t("common.cancel")}</Button>
             <Button
               variant="destructive"
               className="flex-1 sm:flex-none"
               onClick={() => {
-                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+                if (deleteTarget) deleteMutation.mutate({ id: deleteTarget.id, deleteFiles });
                 setDeleteTarget(null);
+                setDeleteFiles(false);
               }}
             >
               {t("common.delete")}

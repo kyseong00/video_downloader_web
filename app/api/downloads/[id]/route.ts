@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, downloads } from "@/lib/db";
+import { db, downloads, deletedVideos } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import fs from "fs";
 import { activeDownloads } from "@/lib/active-downloads";
+import { extractVideoId, generateId } from "@/lib/utils";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -66,6 +67,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   // Delete file if exists
   if (download.filePath && fs.existsSync(download.filePath)) {
     fs.unlinkSync(download.filePath);
+  }
+
+  // 재다운로드 방지 — 같은 소스에서 동일 video ID가 다시 큐잉되지 않도록 기록
+  const videoId = extractVideoId(download.url);
+  if (videoId && download.source) {
+    try {
+      await db.insert(deletedVideos).values({
+        id: generateId(),
+        userId: session.user.id,
+        source: download.source,
+        videoId,
+        url: download.url,
+        subscriptionId: download.subscriptionId ?? null,
+        playlistId: download.playlistId ?? null,
+      });
+    } catch { /* ignore duplicates or older rows without source */ }
   }
 
   await db.delete(downloads).where(eq(downloads.id, params.id));

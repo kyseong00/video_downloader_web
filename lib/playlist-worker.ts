@@ -1,5 +1,5 @@
-import { db, playlists, downloads } from "./db";
-import { eq, and } from "drizzle-orm";
+import { db, playlists, downloads, deletedVideos } from "./db";
+import { eq, and, isNull, or } from "drizzle-orm";
 import { generateId } from "./utils";
 import { ensureDownloadPath, downloadVideo } from "./ytdlp";
 import { spawn } from "child_process";
@@ -64,13 +64,17 @@ export async function getPlaylistVideos(
         if (!line) continue;
         try {
           const info = JSON.parse(line);
-          if (info.id) {
-            videos.push({
-              id: info.id,
-              url: info.url || info.webpage_url || `https://www.youtube.com/watch?v=${info.id}`,
-              title: info.title || info.id,
-            });
-          }
+          if (!info.id) continue;
+          // 비공개/삭제/제한된 영상은 스킵 (큐잉조차 안 함)
+          const title: string = info.title || "";
+          if (/^\[(private|deleted|unavailable|removed) video\]$/i.test(title)) continue;
+          const availability: string | undefined = info.availability;
+          if (availability && ["private", "needs_auth", "subscriber_only", "premium_only"].includes(availability)) continue;
+          videos.push({
+            id: info.id,
+            url: info.url || info.webpage_url || `https://www.youtube.com/watch?v=${info.id}`,
+            title: title || info.id,
+          });
         } catch { /* ignore */ }
       }
       resolve(videos);
@@ -228,15 +232,23 @@ export async function checkUserPlaylists(
 
   if (pls.length === 0) return { checked: 0, queued: 0 };
 
-  // 기존 다운로드를 video ID 기반으로 중복 체크
+  // 중복 체크: PLAYLIST 소스 또는 source NULL(마이그레이션 이전 레코드)
   const existingDownloads = await db.select({ url: downloads.url }).from(downloads)
-    .where(eq(downloads.userId, userId));
+    .where(and(
+      eq(downloads.userId, userId),
+      or(eq(downloads.source, "PLAYLIST"), isNull(downloads.source)),
+    ));
   const existingIds = new Set<string>();
   for (const d of existingDownloads) {
     const vid = extractVideoId(d.url);
     if (vid) existingIds.add(vid);
     existingIds.add(d.url);
   }
+
+  // 재다운로드 방지 — PLAYLIST 소스로 삭제된 video ID는 제외
+  const deleted = await db.select({ videoId: deletedVideos.videoId }).from(deletedVideos)
+    .where(and(eq(deletedVideos.userId, userId), eq(deletedVideos.source, "PLAYLIST")));
+  for (const d of deleted) existingIds.add(d.videoId);
 
   const maxConcurrent = settings.maxGlobalConcurrent ?? 3;
   const outputDir = ensureDownloadPath(userId);
@@ -271,6 +283,8 @@ export async function checkUserPlaylists(
           type: ["mp3", "m4a", "wav", "opus"].includes(pl.format) ? "AUDIO" : "VIDEO",
           status: "PENDING",
           progress: 0,
+          source: "PLAYLIST",
+          playlistId: pl.id,
           userId,
         });
 
